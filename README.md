@@ -1,111 +1,107 @@
 # HR Statistics Dashboard
 
 A web version of the offline HR statistics dashboard: a public read-only view backed by
-Firebase Firestore, plus a password-protected admin page for entering each month's numbers.
+Firebase Firestore, plus a password-protected admin section for entering each month's numbers.
 
-- **Hosting:** GitHub Pages (plain static HTML/CSS/JS, no build step)
+- **Hosting:** GitHub Pages, deployed straight from the repo root (same layout as your
+  `my-dashboard` repo — flat files, `style.css` at the top level, a `js/` folder for scripts).
 - **Data:** Firebase Firestore
 - **Login (admin only):** Firebase Authentication (email/password)
 
-The public dashboard (`index.html`) is visible to anyone with the link. Only people who log
-in on `admin.html` can add or edit data.
+`index.html` is public — anyone with the link can view it. `admin.html` is protected: if you're
+not signed in it sends you to `login.html`, and only accounts you create in the Firebase
+Console can sign in (no public sign-up page, on purpose — see note below).
 
 ---
 
 ## 1. Create the Firebase project
 
 1. Go to [console.firebase.google.com](https://console.firebase.google.com) → **Add project**.
-2. Once created, click the **web** icon (`</>`) to register a web app. You don't need Firebase
-   Hosting — you're deploying to GitHub Pages instead.
+2. Click the **web** icon (`</>`) to register a web app. You don't need Firebase Hosting —
+   you're deploying to GitHub Pages instead.
 3. Copy the `firebaseConfig` object it gives you.
-4. Paste those values into `js/firebase-config.js` in this project, replacing the placeholders.
+4. Paste those values into `js/firebase-config.js`, replacing the placeholders.
 
 ## 2. Turn on Authentication
 
-1. In the Firebase Console: **Build → Authentication → Get started**.
+1. **Build → Authentication → Get started**.
 2. Enable the **Email/Password** sign-in method.
-3. Go to the **Users** tab → **Add user** and create an account for yourself (and anyone else
-   who should be able to edit data). There is intentionally no public sign-up page — you create
-   admin accounts manually here.
+3. **Users** tab → **Add user** → create an account for yourself (and anyone else who should be
+   able to edit data). This is the only way to create admin accounts.
 
 ## 3. Turn on Firestore
 
-1. **Build → Firestore Database → Create database**. Start in production mode (any region close
-   to you is fine).
-2. Go to the **Rules** tab and replace the default rules with the contents of `firestore.rules`
-   in this project, then **Publish**. This makes the data publicly *readable* but only
-   *writable* by signed-in users.
+1. **Build → Firestore Database → Create database** (production mode, any nearby region).
+2. **Rules** tab → replace the default rules with the contents of `firestore.rules` → **Publish**.
+   This makes data publicly *readable* but only *writable* by signed-in users.
 
-You don't need to create any documents manually — the Admin page will create the `sites`
-collection and each site's `reports` subcollection the first time you use it.
+The `sites` collection and each site's `reports` subcollection are created automatically the
+first time you use the Admin page — no manual document setup needed.
 
-## 4. Run it locally (optional, to test before publishing)
+## 4. Run it locally (optional)
 
-Any static file server works, e.g. from this folder:
+From this folder:
 
 ```bash
 python3 -m http.server 8080
 ```
 
-Then open `http://localhost:8080`. Go to `admin.html`, sign in, add a site (e.g. "YHT"), then
-add a monthly report (Period ID like `2026-08`, Period label like `Aug/26`, and fill in the
-numbers). Go back to `index.html` and you should see it rendered.
+Open `http://localhost:8080`. Go to `login.html`, sign in, then on `admin.html` add a site
+(e.g. "YHT") and a monthly report (Period ID like `2026-08`, label like `Aug/26`, and the
+numbers). Check `index.html` to see it rendered.
 
-> Firebase Auth restricts sign-in to **authorized domains**. `localhost` is authorized by
-> default. Once you publish to GitHub Pages, add that domain too — see step 6.
+`localhost` is authorized for sign-in by default — once published, add your Pages domain too
+(step 6).
 
 ## 5. Publish to GitHub Pages
 
-1. Create a new GitHub repository and push this folder's contents to it (root of the repo, or
-   a `/docs` folder — either works, just set the Pages source to match).
-2. In the repo: **Settings → Pages → Source**, pick the branch (usually `main`) and folder
-   (`/ (root)` or `/docs`), then **Save**.
-3. GitHub gives you a URL like `https://yourusername.github.io/your-repo/`. It can take a
-   minute to go live.
+1. Push this folder's contents to the root of your repo (matching `my-dashboard`'s layout).
+2. **Settings → Pages → Source** → pick the branch (`main`) and `/ (root)` → **Save**.
+3. Your URL will look like `https://rashedshub.github.io/your-repo/`.
 
 ## 6. Authorize your GitHub Pages domain in Firebase
 
-1. Firebase Console → **Authentication → Settings → Authorized domains**.
-2. Click **Add domain** and add `yourusername.github.io` (just the domain, no path).
+**Authentication → Settings → Authorized domains → Add domain** → add `rashedshub.github.io`
+(just the domain, no path). Without this, sign-in on the published `login.html` fails with
+`auth/unauthorized-domain`.
 
-Without this step, sign-in on the published `admin.html` will fail with an
-`auth/unauthorized-domain` error.
+## 7. On the missing sign-up page
 
-## 7. (Optional) Restrict who can sign up
-
-There is no self-serve sign-up flow in this app — admin accounts can only be created by you in
-the Firebase Console, which is the simplest way to control who can edit data. If you later want
-self-serve invites, that requires more setup (e.g. Firebase Cloud Functions) and isn't included
-here.
+Your `my-dashboard` repo has a `signup.html`; this project deliberately doesn't. A public
+sign-up form would let anyone create an account able to edit your HR numbers. Creating accounts
+yourself in the Firebase Console keeps that closed. If you'd rather have a real sign-up flow
+(e.g. gated by an invite code, or restricted to your company's email domain), that's doable —
+just ask and I'll add it.
 
 ---
 
 ## Data model
 
 ```
-sites/{siteId}                → { name: "YHT" }
+sites/{siteId}                     → { name: "YHT" }
 sites/{siteId}/reports/{periodId}  → { period: "Aug/26", manpower: 6895, ... all KPI fields }
 ```
 
-`periodId` is whatever you type in Admin (e.g. `2026-08`) — keep it sortable, since the
-dashboard and admin list both sort periods by document ID, newest first.
+`periodId` is whatever you type in Admin (e.g. `2026-08`) — keep it sortable, since both the
+dashboard and admin list sort periods by document ID, newest first.
 
-All the fields shown on each card (manpower, direct manpower %, turnover, leave consumption,
-injuries, etc.) are defined in one place: **`js/schema.js`**. To add a new KPI card or field,
-add an entry there — it will automatically show up in both the admin form and the public
-dashboard.
+Every field shown on a card (manpower, direct manpower %, turnover, leave consumption,
+injuries, etc.) is defined once in **`js/schema.js`**. Add an entry there to add a new KPI —
+it appears automatically in both the admin form and the public dashboard.
 
 ## Project structure
 
 ```
-index.html          Public dashboard (no login required)
-admin.html           Login + data entry
-css/style.css        Shared styling
+index.html            Public dashboard (no login required)
+login.html             Sign in
+admin.html              Data entry (redirects to login.html if not signed in)
+style.css               Shared styling
 js/firebase-config.js   Your Firebase project keys (edit this)
-js/schema.js          Field/card definitions — single source of truth
-js/app.js             Public dashboard logic (reads Firestore)
-js/admin.js            Admin logic (auth + Firestore read/write)
-firestore.rules        Security rules to paste into the Firebase Console
+js/schema.js            Field/card definitions — single source of truth
+js/app.js               Public dashboard logic (reads Firestore)
+js/login.js              Sign-in logic
+js/admin.js               Admin logic (auth guard + Firestore read/write)
+firestore.rules           Security rules to paste into the Firebase Console
 ```
 
 ## Notes
@@ -115,5 +111,5 @@ firestore.rules        Security rules to paste into the Firebase Console
 - The site and period pickers on the public dashboard update the URL
   (`?site=...&period=...`) so you can bookmark or share a link to a specific view.
 - This is a fully client-side app — there's no server. Firestore's security rules are what
-  actually protect the data from being edited by the public; the "Admin" link is just a page,
-  not a security boundary by itself.
+  actually protect the data from being edited by the public; `login.html`/`admin.html` are
+  just pages, not a security boundary by themselves.

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign in — HR Statistics Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body>
+
+<div class="topbar">
+  <h1><i data-lucide="lock"></i> Sign in</h1>
+  <div class="controls">
+    <a class="btn" href="index.html"><i data-lucide="arrow-left"></i> Back to dashboard</a>
+  </div>
+</div>
+
+<div class="auth-shell">
+  <h2>Admin sign in</h2>
+  <div class="field">
+    <label>Email</label>
+    <input type="email" id="loginEmail" placeholder="you@company.com" autocomplete="username">
+  </div>
+  <div class="field">
+    <label>Password</label>
+    <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+  </div>
+  <div class="error-text" id="loginError"></div>
+  <button class="btn primary" id="loginBtn" style="width:100%;justify-content:center;">Sign in</button>
+  <p class="hint">Admin accounts are created in the Firebase Console → Authentication → Users. There's no public sign-up — ask whoever manages the Firebase project to add you.</p>
+</div>
+
+<script type="module" src="js/login.js"></script>
+<script>lucide.createIcons();</script>
+</body>
+</html>

@@ -2,7 +2,7 @@ import { firebaseConfig } from "./firebase-config.js";
 import { CARD_GROUPS, emptyReport } from "./schema.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut
+  getAuth, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, collection, getDocs, query, orderBy, doc, getDoc, setDoc, addDoc, deleteDoc
@@ -13,11 +13,9 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 // ── DOM refs ──────────────────────────────────────────────
-const loginShell = document.getElementById("loginShell");
+const checkingMsg = document.getElementById("checkingMsg");
 const adminShell = document.getElementById("adminShell");
 const logoutBtn = document.getElementById("logoutBtn");
-const loginBtn = document.getElementById("loginBtn");
-const loginError = document.getElementById("loginError");
 
 const sitesList = document.getElementById("sitesList");
 const newSiteName = document.getElementById("newSiteName");
@@ -36,33 +34,19 @@ const toast = document.getElementById("toast");
 
 let sitesCache = [];
 
-// ── Auth ──────────────────────────────────────────────────
+// ── Auth guard ────────────────────────────────────────────
+// This page is protected: no session → send to login.html.
 onAuthStateChanged(auth, async (user) => {
   if (user) {
-    loginShell.style.display = "none";
+    checkingMsg.style.display = "none";
     adminShell.style.display = "block";
-    logoutBtn.style.display = "inline-flex";
     await refreshSites();
   } else {
-    loginShell.style.display = "block";
-    adminShell.style.display = "none";
-    logoutBtn.style.display = "none";
+    window.location.replace("login.html");
   }
 });
 
-loginBtn.addEventListener("click", async () => {
-  loginError.textContent = "";
-  const email = document.getElementById("loginEmail").value.trim();
-  const password = document.getElementById("loginPassword").value;
-  try {
-    await signInWithEmailAndPassword(auth, email, password);
-  } catch (err) {
-    loginError.textContent = "Sign-in failed. Check your email and password.";
-    console.error(err);
-  }
-});
-
-logoutBtn.addEventListener("click", () => signOut(auth));
+logoutBtn.addEventListener("click", () => signOut(auth).then(() => window.location.replace("login.html")));
 
 // ── Sites ─────────────────────────────────────────────────
 async function refreshSites() {
