@@ -315,3 +315,174 @@ main{padding:20px 28px 48px;}
 .state-msg{
   text-align:center;color:#8794a8;padding:60px 20px;font-size:14px;
 }
+
+
+/* ── New top bar: HR STATISTICS / Period / Plant ────────────── */
+.hs-topbar{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  padding:16px 28px;
+  background:linear-gradient(90deg, #16233a 0%, #2c4b74 55%, #4a72a3 100%);
+  color:#fff;
+  flex-wrap:wrap;
+}
+.hs-title{
+  font-family:var(--font-display);
+  font-weight:700;
+  font-size:20px;
+  letter-spacing:.6px;
+  margin:0;
+}
+.hs-topbar-item{
+  font-size:16px;
+  font-weight:500;
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+.hs-topbar-right{gap:14px;}
+.hs-topbar-item select{
+  font-family:var(--font-body);
+  font-size:15px;
+  font-weight:600;
+  border:none;
+  background:transparent;
+  color:#fff;
+  cursor:pointer;
+  padding:2px 4px;
+}
+.hs-topbar-item select option{color:#111;}
+.hs-admin-link{
+  color:#fff;
+  opacity:.75;
+  text-decoration:none;
+  font-size:18px;
+  margin-left:6px;
+  transition:opacity .15s ease;
+}
+.hs-admin-link:hover{opacity:1;}
+
+/* ── Stat panels (Leave Consumption / Sick Leave) ───────────── */
+.hs-panels{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:20px;
+  padding:20px 28px 48px;
+  max-width:1200px;
+  margin:0 auto;
+}
+@media (max-width:800px){
+  .hs-panels{grid-template-columns:1fr;padding:16px 16px 40px;}
+}
+
+.stat-panel{
+  border-radius:10px;
+  overflow:hidden;
+  box-shadow:0 1px 3px rgba(20,30,50,.08);
+  background:#fff;
+}
+.stat-panel-header{
+  background:linear-gradient(90deg, #16233a 0%, #3a5f8f 60%, #6f93bd 100%);
+  color:#fff;
+  font-family:var(--font-display);
+  font-weight:600;
+  font-size:16px;
+  padding:12px 18px;
+}
+.stat-panel-body{
+  background:#f0f1f3;
+  padding:20px;
+}
+.stat-body-cols{
+  display:flex;
+  gap:24px;
+  flex-wrap:wrap;
+}
+.stat-labels{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  justify-content:center;
+  flex:0 0 auto;
+}
+.stat-row{
+  display:flex;
+  align-items:baseline;
+  gap:8px;
+  font-size:15px;
+  color:#1c2c42;
+  white-space:nowrap;
+}
+.stat-row span{color:#3a4a5f;}
+.stat-row b{
+  font-family:var(--font-display);
+  font-size:17px;
+}
+.stat-bars{
+  flex:1 1 220px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  min-width:200px;
+}
+.stat-bars-title{
+  text-align:center;
+  font-weight:600;
+  font-size:14px;
+  color:#1c2c42;
+  background:#fff;
+  border-radius:4px;
+  padding:6px 10px;
+}
+.progress-track{
+  background:#fff;
+  border:1px solid #22406b;
+  border-radius:4px;
+  height:34px;
+  position:relative;
+  overflow:hidden;
+}
+.progress-fill{
+  background:#3b6fae;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:width 1s cubic-bezier(.4,0,.2,1);
+  min-width:0;
+}
+.progress-fill span{
+  color:#fff;
+  font-weight:700;
+  font-size:14px;
+  white-space:nowrap;
+  text-shadow:0 1px 2px rgba(0,0,0,.15);
+}
+.big-figure-box{
+  flex:0 0 auto;
+  background:#fff;
+  border:1px solid #d9dde3;
+  border-radius:6px;
+  width:130px;
+  height:100px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.big-figure{
+  font-family:var(--font-display);
+  font-weight:700;
+  font-size:36px;
+  color:#111;
+}
+.category-tag{
+  margin-top:16px;
+  background:#fff;
+  border-radius:4px;
+  padding:9px 14px;
+  font-size:14px;
+  color:#1c2c42;
+}
+.category-tag b{font-family:var(--font-display);}

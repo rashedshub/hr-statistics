@@ -1,158 +1,61 @@
 // ─────────────────────────────────────────────────────────────
-// Single source of truth for every KPI field on the dashboard.
-// Add a field here and it automatically appears in both the
-// public dashboard and the admin entry form.
-//
-// type: "text"   -> plain text value (e.g. "Dec/24")
-//       "number" -> plain number, no % sign
-//       "percent"-> number rendered with a % sign (and a ring if ring:true)
-// ring: draw an animated circular progress indicator
-// sub:  optional secondary value shown under the main number
-//       { key, label, type }
+// Dashboard topics, built one at a time.
+// Each topic has its own admin fields and its own render logic
+// in app.js. Flip `enabled: true` here once a topic's dashboard
+// panel has been built, so it starts showing up for everyone.
 // ─────────────────────────────────────────────────────────────
 
-export const CARD_GROUPS = [
+export const TOPICS = [
   {
-    area: "period",
-    icon: "calendar",
-    title: "Period",
-    fields: [{ key: "period", type: "text", big: true }],
-    note: "*YTD - Year to Date\n*FY - Fiscal Year"
-  },
-  {
-    area: "manpower",
-    icon: "users",
-    title: "Manpower",
-    fields: [{ key: "manpower", type: "number" }],
-    sub: { key: "manpowerYtdAvg", label: "YTD (Average):", type: "number" }
-  },
-  {
-    area: "directmp",
-    icon: "user-check",
-    title: "Direct Manpower",
-    fields: [{ key: "directManpower", type: "percent", ring: true }],
-    sub: { key: "directManpowerYtdAvg", label: "YTD (Average):", type: "percent", ring: true, small: true }
-  },
-  {
-    area: "shortage",
-    icon: "shield-alert",
-    title: "Manpower excess/ (shortage)",
-    fields: [{ key: "manpowerShortage", type: "number", signed: true }],
-    sub: { key: "manpowerShortageYtdAvg", label: "YTD (Average):", type: "number", signed: true }
-  },
-  {
-    area: "present",
-    icon: "user-round-check",
-    title: "Present",
-    fields: [{ key: "present", type: "percent", ring: true }],
-    sub: { key: "presentYtdAvg", label: "YTD (Average):", type: "percent", ring: true, small: true }
-  },
-  {
-    area: "training",
-    icon: "presentation",
-    title: "Training",
-    caption: "% completion vs plan",
-    fields: [{ key: "training", type: "percent", ring: true }],
-    sub: { key: "trainingFY", label: "FY:", type: "percent", ring: true, small: true }
-  },
-  {
-    area: "turnover",
-    icon: "refresh-cw",
-    title: "Employee Turnover",
-    wide: true,
-    columns: [
-      {
-        label: "After probation",
-        key: "turnoverAfterProbation",
-        subKey: "turnoverAfterProbationYtdAvg",
-        subLabel: "YTD (Average):"
-      },
-      {
-        label: "Total: before and after probation",
-        key: "turnoverTotal",
-        subKey: "turnoverTotalYtdAvg",
-        subLabel: ""
-      }
+    id: "leave",
+    title: "Leave Consumption",
+    icon: "calendar-clock",
+    enabled: true,
+    fields: [
+      { key: "totalElPlan", label: "Total EL (Plan) — annual", type: "number" },
+      { key: "monthElPlan", label: "This Month Plan", type: "number" },
+      { key: "monthElActual", label: "This Month Actual (consumed)", type: "number" }
     ]
   },
   {
-    area: "leave",
-    icon: "calendar-clock",
-    title: "Leave Consumption",
-    fields: [{ key: "leaveConsumption", type: "percent", ring: true }],
-    sub: { key: "leaveConsumptionFY", label: "FY:", type: "percent", ring: true, small: true }
+    id: "sickLeave",
+    title: "Sick Leave",
+    icon: "thermometer",
+    enabled: true,
+    fields: [
+      { key: "monthSickDays", label: "This Month — sick leave days taken", type: "number" },
+      { key: "monthSickEmployees", label: "This Month — employees on sick leave", type: "number" },
+      { key: "monthHeadcount", label: "This Month — total headcount", type: "number" }
+    ]
   },
-  {
-    area: "injuries",
-    icon: "user-round-x",
-    title: "Injuries",
-    fields: [{ key: "injuries", type: "number" }],
-    sub: { key: "injuriesYtdCumulative", label: "YTD (Cumulative):", type: "number" }
-  },
-  {
-    area: "attendance",
-    icon: "pencil-line",
-    title: "Attendance through manual adjustment",
-    fields: [{ key: "attendanceManual", type: "number" }],
-    sub: { key: "attendanceManualYtdCumulative", label: "YTD (Cumulative):", type: "number" }
-  },
-  {
-    area: "cash",
-    icon: "banknote",
-    title: "Cash payment on wages",
-    fields: [{ key: "cashPayment", type: "number" }],
-    sub: { key: "cashPaymentYtdCumulative", label: "YTD (Cumulative):", type: "number" }
-  },
-  {
-    area: "unpaid",
-    icon: "credit-card-off",
-    title: "Employees with unpaid wage",
-    fields: [{ key: "unpaidWage", type: "number" }],
-    sub: { key: "unpaidWageYtdOutstanding", label: "YTD Outstanding:", type: "number" }
-  },
-  {
-    area: "zt",
-    icon: "ban",
-    title: "ZT issues",
-    fields: [{ key: "ztIssues", type: "number" }],
-    sub: { key: "ztIssuesYtdOutstanding", label: "YTD Outstanding:", type: "number" }
-  },
-  {
-    area: "hours",
-    icon: "clock",
-    title: "Workers with excessive working hours",
-    fields: [{ key: "excessiveHours", type: "percent" }]
-  },
-  {
-    area: "feedback",
-    icon: "message-circle",
-    title: "Employees Feedback Received",
-    fields: [{ key: "feedback", type: "number" }],
-    sub: { key: "feedbackYtdCumulative", label: "YTD (Cumulative):", type: "number" }
-  },
-  {
-    area: "oneonone",
-    icon: "users-round",
-    title: "Workers one-on-one interview",
-    fields: [{ key: "oneOnOne", type: "number" }],
-    sub: { key: "oneOnOneYtdCumulative", label: "YTD (Cumulative):", type: "number" }
-  },
-  {
-    area: "disciplinary",
-    icon: "scale",
-    title: "Outstanding Disciplinary",
-    caption: "(>45 Days)",
-    fields: [{ key: "disciplinary", type: "number" }]
-  }
+
+  // ── Not built yet — next topics to add, one at a time ──────
+  { id: "manpower", title: "Manpower", icon: "users", enabled: false, fields: [] },
+  { id: "directManpower", title: "Direct Manpower", icon: "user-check", enabled: false, fields: [] },
+  { id: "manpowerShortage", title: "Manpower excess/(shortage)", icon: "shield-alert", enabled: false, fields: [] },
+  { id: "present", title: "Present", icon: "user-round-check", enabled: false, fields: [] },
+  { id: "training", title: "Training", icon: "presentation", enabled: false, fields: [] },
+  { id: "turnover", title: "Employee Turnover", icon: "refresh-cw", enabled: false, fields: [] },
+  { id: "injuries", title: "Injuries", icon: "user-round-x", enabled: false, fields: [] },
+  { id: "attendance", title: "Attendance through manual adjustment", icon: "pencil-line", enabled: false, fields: [] },
+  { id: "cash", title: "Cash payment on wages", icon: "banknote", enabled: false, fields: [] },
+  { id: "unpaid", title: "Employees with unpaid wage", icon: "credit-card-off", enabled: false, fields: [] },
+  { id: "zt", title: "ZT issues", icon: "ban", enabled: false, fields: [] },
+  { id: "hours", title: "Workers with excessive working hours", icon: "clock", enabled: false, fields: [] },
+  { id: "feedback", title: "Employees Feedback Received", icon: "message-circle", enabled: false, fields: [] },
+  { id: "oneonone", title: "Workers one-on-one interview", icon: "users-round", enabled: false, fields: [] },
+  { id: "disciplinary", title: "Outstanding Disciplinary", icon: "scale", enabled: false, fields: [] }
 ];
 
-// Flat list of every simple field key (for building the admin form + empty record)
+export function enabledTopics() {
+  return TOPICS.filter(t => t.enabled);
+}
+
+// Blank report object covering every enabled topic's fields, plus period label.
 export function emptyReport() {
-  const rec = {};
-  for (const g of CARD_GROUPS) {
-    if (g.fields) for (const f of g.fields) rec[f.key] = f.type === "text" ? "" : 0;
-    if (g.sub) rec[g.sub.key] = 0;
-    if (g.columns) for (const c of g.columns) { rec[c.key] = 0; rec[c.subKey] = 0; }
+  const rec = { period: "" };
+  for (const t of enabledTopics()) {
+    for (const f of t.fields) rec[f.key] = 0;
   }
   return rec;
 }

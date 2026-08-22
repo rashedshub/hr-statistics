@@ -1,8 +1,7 @@
 import { firebaseConfig } from "./firebase-config.js";
-import { CARD_GROUPS } from "./schema.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getFirestore, collection, getDocs, query, orderBy, doc, getDoc
+  getFirestore, collection, getDocs, query, orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp(firebaseConfig);
@@ -10,21 +9,21 @@ const db = getFirestore(app);
 
 const siteSelect = document.getElementById("siteSelect");
 const periodSelect = document.getElementById("periodSelect");
-const siteNameLabel = document.getElementById("siteNameLabel");
-const grid = document.getElementById("grid");
 const stateMsg = document.getElementById("stateMsg");
+const topicsWrap = document.getElementById("topicsWrap");
 
 let sites = [];
 let currentSiteId = null;
+let reportsById = {}; // periodId -> report data, for the currently loaded site
 
 function setState(msg) {
   if (msg) {
     stateMsg.textContent = msg;
     stateMsg.style.display = "block";
-    grid.style.display = "none";
+    topicsWrap.style.display = "none";
   } else {
     stateMsg.style.display = "none";
-    grid.style.display = "grid";
+    topicsWrap.style.display = "grid";
   }
 }
 
@@ -33,7 +32,7 @@ async function loadSites() {
   sites = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
   if (sites.length === 0) {
-    setState("No sites yet. Go to Admin to add your first site and monthly report.");
+    setState("No plants yet. Go to Admin to add your first plant and monthly report.");
     return;
   }
 
@@ -42,40 +41,87 @@ async function loadSites() {
   const wanted = params.get("site");
   currentSiteId = sites.some(s => s.id === wanted) ? wanted : sites[0].id;
   siteSelect.value = currentSiteId;
-  siteNameLabel.textContent = sites.find(s => s.id === currentSiteId)?.name || "—";
 
-  await loadPeriodsForSite(currentSiteId, params.get("period"));
+  await loadReportsForSite(currentSiteId, params.get("period"));
 }
 
-async function loadPeriodsForSite(siteId, wantedPeriod) {
-  setState("Loading periods…");
-  // Sorted client-side (instead of orderBy in the query) so this never needs
-  // a Firestore composite index, however many sites/reports you add.
+async function loadReportsForSite(siteId, wantedPeriod) {
+  setState("Loading…");
   const snap = await getDocs(collection(db, "sites", siteId, "reports"));
-  const periods = snap.docs.map(d => d.id).sort((a, b) => b.localeCompare(a));
+  reportsById = {};
+  snap.docs.forEach(d => { reportsById[d.id] = d.data(); });
+
+  const periods = Object.keys(reportsById).sort((a, b) => b.localeCompare(a));
 
   if (periods.length === 0) {
     periodSelect.innerHTML = "";
-    setState("No monthly reports yet for this site. Add one from Admin.");
+    setState("No monthly reports yet for this plant. Add one from Admin.");
     return;
   }
 
-  periodSelect.innerHTML = periods.map(p => `<option value="${p}">${p}</option>`).join("");
-  const chosen = periods.includes(wantedPeriod) ? wantedPeriod : periods[0];
-  periodSelect.value = chosen;
-  await loadReport(siteId, chosen);
+  periodSelect.innerHTML = periods.map(p =>
+    `<option value="${p}">${escapeHtml(reportsById[p].period || p)}</option>`
+  ).join("");
+  const chosenPeriod = periods.includes(wantedPeriod) ? wantedPeriod : periods[0];
+  periodSelect.value = chosenPeriod;
+
+  render(siteId, chosenPeriod);
+  setState(null);
 }
 
-async function loadReport(siteId, periodId) {
-  setState("Loading data…");
-  const snap = await getDoc(doc(db, "sites", siteId, "reports", periodId));
-  if (!snap.exists()) {
-    setState("That report could not be found.");
-    return;
-  }
-  renderDashboard(snap.data());
-  setState(null);
+function periodYear(periodId) {
+  const m = /^(\d{4})-(\d{2})$/.exec(periodId);
+  return m ? m[1] : null;
+}
+
+// Sum a numeric field across every period in the same calendar year as
+// `periodId`, up to and including it — i.e. year-to-date.
+function ytdSum(periodId, key) {
+  const year = periodYear(periodId);
+  let ids = Object.keys(reportsById);
+  if (year) ids = ids.filter(id => periodYear(id) === year);
+  ids = ids.filter(id => id <= periodId).sort();
+  return ids.reduce((sum, id) => sum + (Number(reportsById[id][key]) || 0), 0);
+}
+
+function render(siteId, periodId) {
+  const current = reportsById[periodId] || {};
+
+  // ── Leave Consumption ──────────────────────────────────────
+  const totalElPlan = Number(current.totalElPlan) || 0;
+  const monthElPlan = Number(current.monthElPlan) || 0;
+  const monthElActual = Number(current.monthElActual) || 0;
+  const ytdElActual = ytdSum(periodId, "monthElActual");
+
+  const monthPct = monthElPlan > 0 ? Math.round((monthElActual / monthElPlan) * 1000) / 10 : 0;
+  const ytdPct = totalElPlan > 0 ? Math.round((ytdElActual / totalElPlan) * 1000) / 10 : 0;
+
+  document.getElementById("leaveTotalPlan").textContent = totalElPlan.toLocaleString();
+  document.getElementById("leaveMonthActual").textContent = monthElActual.toLocaleString();
+  document.getElementById("leaveYtdActual").textContent = ytdElActual.toLocaleString();
+  setBar("leaveMonthBar", "leaveMonthPct", monthPct);
+  setBar("leaveYtdBar", "leaveYtdPct", ytdPct);
+
+  // ── Sick Leave ──────────────────────────────────────────────
+  const monthSickDays = Number(current.monthSickDays) || 0;
+  const monthSickEmployees = Number(current.monthSickEmployees) || 0;
+  const monthHeadcount = Number(current.monthHeadcount) || 0;
+  const ytdSickDays = ytdSum(periodId, "monthSickDays");
+  const sickPct = monthHeadcount > 0 ? Math.round((monthSickEmployees / monthHeadcount) * 1000) / 10 : 0;
+
+  document.getElementById("sickMonthDays").textContent = monthSickDays.toLocaleString();
+  document.getElementById("sickYtdDays").textContent = ytdSickDays.toLocaleString();
+  document.getElementById("sickPct").textContent = `${sickPct}%`;
+
   syncUrl(siteId, periodId);
+}
+
+function setBar(barId, labelId, pct) {
+  const clamped = Math.max(0, Math.min(100, pct));
+  const bar = document.getElementById(barId);
+  const label = document.getElementById(labelId);
+  label.textContent = `${pct}%`;
+  requestAnimationFrame(() => { bar.style.width = `${clamped}%`; });
 }
 
 function syncUrl(siteId, periodId) {
@@ -85,129 +131,17 @@ function syncUrl(siteId, periodId) {
   history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
 }
 
-function fmt(val, type, signed) {
-  if (val === undefined || val === null || val === "") return "—";
-  if (type === "text") return val;
-  const n = Number(val);
-  const sign = signed && n > 0 ? "+" : "";
-  const out = type === "percent" ? `${n}%` : `${sign}${n.toLocaleString()}`;
-  return out;
-}
-
-function ringSvg(pct, small) {
-  const size = small ? 52 : 82;
-  const stroke = 9;
-  const r = (size - stroke) / 2;
-  const c = 2 * Math.PI * r;
-  const clamped = Math.max(0, Math.min(100, Number(pct) || 0));
-  const offset = c - (clamped / 100) * c;
-  return `
-  <div class="ring-wrap ${small ? "small" : ""}">
-    <svg viewBox="0 0 ${size} ${size}">
-      <circle class="ring-track" cx="${size/2}" cy="${size/2}" r="${r}"></circle>
-      <circle class="ring-fill" cx="${size/2}" cy="${size/2}" r="${r}"
-        stroke-dasharray="${c}" stroke-dashoffset="${c}" data-final-offset="${offset}"></circle>
-    </svg>
-    <div class="ring-label">${clamped}%</div>
-  </div>`;
-}
-
 function escapeHtml(s) {
   return String(s ?? "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
 }
 
-function renderDashboard(data) {
-  const cards = CARD_GROUPS.map(g => {
-    if (g.columns) {
-      // Employee Turnover style card: two side-by-side columns, no ring
-      const cols = g.columns.map(c => `
-        <div class="turnover-col">
-          <div class="col-label">${escapeHtml(c.label)}</div>
-          <div class="big-value">${fmt(data[c.key], "percent")}</div>
-          ${c.subLabel ? `<div class="sub-row"><span>${escapeHtml(c.subLabel)}</span> <b>${fmt(data[c.subKey], "percent")}</b></div>`
-                       : `<div class="sub-row"><span></span> <b>${fmt(data[c.subKey], "percent")}</b></div>`}
-        </div>`).join("");
-      return `
-      <div class="card g-${g.area}">
-        <div class="card-head">
-          <div class="card-icon"><i data-lucide="${g.icon}"></i></div>
-          <div><div class="card-title">${escapeHtml(g.title)}</div></div>
-        </div>
-        <div class="card-body">${cols}</div>
-      </div>`;
-    }
-
-    const f = g.fields[0];
-    const val = data[f.key];
-    const negative = f.signed && Number(val) < 0;
-    const subVal = g.sub ? data[g.sub.key] : undefined;
-
-    let bodyHtml;
-    let subHtml = "";
-
-    if (f.ring && g.sub?.ring) {
-      // main ring + small ring side by side (e.g. Present, Training, Direct Manpower, Leave)
-      bodyHtml = `
-        <div class="card-body">
-          ${ringSvg(val, false)}
-          <div style="text-align:right;">
-            <div style="font-size:11.5px;color:var(--muted);margin-bottom:4px;">${escapeHtml(g.sub.label)}</div>
-            ${ringSvg(subVal, true)}
-          </div>
-        </div>`;
-    } else if (f.ring) {
-      bodyHtml = `<div class="card-body">${ringSvg(val, false)}</div>`;
-    } else {
-      bodyHtml = `
-        <div class="card-body">
-          <div class="big-value ${negative ? "negative" : ""}">${fmt(val, f.type, f.signed)}</div>
-        </div>`;
-    }
-
-    if (g.sub && !g.sub.ring) {
-      const subNeg = g.sub.signed && Number(subVal) < 0;
-      subHtml = `<div class="sub-row ${subNeg ? "negative" : ""}"><span>${escapeHtml(g.sub.label)}</span> <b>${fmt(subVal, g.sub.type, g.sub.signed)}</b></div>`;
-    }
-
-    const captionHtml = g.caption ? `<div class="card-caption">${escapeHtml(g.caption)}</div>` : "";
-    const noteHtml = g.note ? `<div class="period-note">${escapeHtml(g.note)}</div>` : "";
-
-    return `
-      <div class="card g-${g.area}">
-        <div class="card-head">
-          <div class="card-icon"><i data-lucide="${g.icon}"></i></div>
-          <div>
-            <div class="card-title">${escapeHtml(g.title)}</div>
-            ${captionHtml}
-          </div>
-        </div>
-        ${bodyHtml}
-        ${subHtml}
-        ${noteHtml}
-      </div>`;
-  }).join("");
-
-  grid.innerHTML = cards;
-  if (window.lucide) lucide.createIcons();
-
-  // animate rings after paint
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      document.querySelectorAll(".ring-fill").forEach(c => {
-        c.style.strokeDashoffset = c.dataset.finalOffset;
-      });
-    });
-  });
-}
-
 siteSelect.addEventListener("change", async () => {
   currentSiteId = siteSelect.value;
-  siteNameLabel.textContent = sites.find(s => s.id === currentSiteId)?.name || "—";
-  await loadPeriodsForSite(currentSiteId);
+  await loadReportsForSite(currentSiteId);
 });
 
-periodSelect.addEventListener("change", async () => {
-  await loadReport(currentSiteId, periodSelect.value);
+periodSelect.addEventListener("change", () => {
+  render(currentSiteId, periodSelect.value);
 });
 
 setState("Loading dashboard…");

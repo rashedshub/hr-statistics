@@ -1,5 +1,5 @@
 import { firebaseConfig } from "./firebase-config.js";
-import { CARD_GROUPS, emptyReport } from "./schema.js";
+import { enabledTopics, emptyReport } from "./schema.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, onAuthStateChanged, signOut
@@ -35,7 +35,6 @@ const toast = document.getElementById("toast");
 let sitesCache = [];
 
 // ── Auth guard ────────────────────────────────────────────
-// This page is protected: no session → send to login.html.
 onAuthStateChanged(auth, async (user) => {
   if (user) {
     checkingMsg.style.display = "none";
@@ -59,7 +58,7 @@ async function refreshSites() {
       <span class="row-actions">
         <button class="del" data-site="${s.id}">Delete</button>
       </span>
-    </li>`).join("") || `<li><span style="color:#8794a8;">No sites yet — add one above.</span></li>`;
+    </li>`).join("") || `<li><span style="color:#8794a8;">No plants yet — add one above.</span></li>`;
 
   const options = sitesCache.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
   formSite.innerHTML = options;
@@ -77,7 +76,7 @@ addSiteBtn.addEventListener("click", async () => {
   if (!name) return;
   await addDoc(collection(db, "sites"), { name });
   newSiteName.value = "";
-  showToast(`Added site "${name}"`);
+  showToast(`Added plant "${name}"`);
   await refreshSites();
 });
 
@@ -87,49 +86,32 @@ async function deleteSite(siteId) {
   const reportsSnap = await getDocs(collection(db, "sites", siteId, "reports"));
   await Promise.all(reportsSnap.docs.map(d => deleteDoc(d.ref)));
   await deleteDoc(doc(db, "sites", siteId));
-  showToast("Site deleted");
+  showToast("Plant deleted");
   await refreshSites();
 }
 
-// ── Dynamic form ──────────────────────────────────────────
+// ── Dynamic form (built from enabled TOPICS only) ──────────
 function buildForm() {
   let html = "";
-  for (const g of CARD_GROUPS) {
-    html += `<div class="form-group-title">${escapeHtml(g.title)}</div>`;
-    if (g.columns) {
-      for (const c of g.columns) {
-        html += inputField(c.key, `${g.title} — ${c.label}`, "number", true);
-        html += inputField(c.subKey, `${g.title} — ${c.label} (YTD avg)`, "number", true);
-      }
-      continue;
-    }
-    for (const f of g.fields) {
-      if (f.key === "period") continue; // handled by dedicated Period label field
-      html += inputField(f.key, g.title, f.type === "text" ? "text" : "number", f.type !== "text");
-    }
-    if (g.sub) {
-      html += inputField(g.sub.key, `${g.title} — ${g.sub.label.replace(":", "")}`, "number", true);
+  for (const topic of enabledTopics()) {
+    html += `<div class="form-group-title">${escapeHtml(topic.title)}</div>`;
+    for (const f of topic.fields) {
+      html += `
+        <div class="field">
+          <label>${escapeHtml(f.label)}</label>
+          <input type="number" step="any" id="field_${f.key}" data-key="${f.key}">
+        </div>`;
     }
   }
   dynamicFormArea.innerHTML = `<div class="form-grid">${html}</div>`;
 }
-
-function inputField(key, label, type, isNumber) {
-  return `
-    <div class="field">
-      <label>${escapeHtml(label)}</label>
-      <input type="${type}" id="field_${key}" data-key="${key}" ${isNumber ? 'step="any"' : ""}>
-    </div>`;
-}
-
 buildForm();
 
 function collectFormData() {
   const data = emptyReport();
   data.period = formPeriodLabel.value.trim();
   dynamicFormArea.querySelectorAll("input[data-key]").forEach(inp => {
-    const key = inp.dataset.key;
-    data[key] = inp.type === "number" ? (inp.value === "" ? 0 : Number(inp.value)) : inp.value;
+    data[inp.dataset.key] = inp.value === "" ? 0 : Number(inp.value);
   });
   return data;
 }
@@ -137,22 +119,23 @@ function collectFormData() {
 function populateForm(data) {
   formPeriodLabel.value = data.period || "";
   dynamicFormArea.querySelectorAll("input[data-key]").forEach(inp => {
-    const key = inp.dataset.key;
-    inp.value = data[key] ?? "";
+    inp.value = data[inp.dataset.key] ?? "";
   });
 }
 
 clearFormBtn.addEventListener("click", () => {
   formPeriodId.value = "";
-  formPeriodLabel.value = "";
   populateForm(emptyReport());
 });
 
 saveReportBtn.addEventListener("click", async () => {
   const siteId = formSite.value;
   const periodId = formPeriodId.value.trim();
-  if (!siteId) { showToast("Add a site first"); return; }
-  if (!periodId) { showToast("Enter a period ID, e.g. 2026-08"); return; }
+  if (!siteId) { showToast("Add a plant first"); return; }
+  if (!periodId) { showToast("Enter a period ID, e.g. 2026-07"); return; }
+  if (!/^\d{4}-\d{2}$/.test(periodId)) {
+    if (!confirm(`"${periodId}" isn't in YYYY-MM format. Year-to-date totals rely on that format — save anyway?`)) return;
+  }
   const data = collectFormData();
   try {
     await setDoc(doc(db, "sites", siteId, "reports", periodId), data);
@@ -172,7 +155,7 @@ async function refreshReportsList() {
   if (!siteId) { reportsList.innerHTML = ""; return; }
   const snap = await getDocs(collection(db, "sites", siteId, "reports"));
   if (snap.empty) {
-    reportsList.innerHTML = `<li><span style="color:#8794a8;">No reports for this site yet.</span></li>`;
+    reportsList.innerHTML = `<li><span style="color:#8794a8;">No reports for this plant yet.</span></li>`;
     return;
   }
   const sortedDocs = [...snap.docs].sort((a, b) => b.id.localeCompare(a.id));

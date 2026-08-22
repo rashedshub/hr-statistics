@@ -24,14 +24,14 @@
 <div class="admin-shell" id="adminShell" style="display:none;">
 
   <div class="admin-panel">
-    <h2 style="margin-top:0;">Sites</h2>
+    <h2 style="margin-top:0;">Plants</h2>
     <div class="form-grid" style="margin-bottom:14px;">
       <div class="field">
-        <label>New site name</label>
+        <label>New plant name</label>
         <input type="text" id="newSiteName" placeholder="e.g. YHT">
       </div>
       <div class="field" style="justify-content:flex-end;">
-        <button class="btn primary" id="addSiteBtn" style="width:fit-content;">Add site</button>
+        <button class="btn primary" id="addSiteBtn" style="width:fit-content;">Add plant</button>
       </div>
     </div>
     <ul class="reports-list" id="sitesList"></ul>
@@ -41,16 +41,16 @@
     <h2 style="margin-top:0;">Monthly report</h2>
     <div class="form-grid">
       <div class="field">
-        <label>Site</label>
+        <label>Plant</label>
         <select id="formSite"></select>
       </div>
       <div class="field">
-        <label>Period (used as ID, e.g. 2026-08)</label>
-        <input type="text" id="formPeriodId" placeholder="2026-08">
+        <label>Period (used as ID — format YYYY-MM, e.g. 2026-07)</label>
+        <input type="text" id="formPeriodId" placeholder="2026-07">
       </div>
       <div class="field">
         <label>Period display label</label>
-        <input type="text" id="formPeriodLabel" placeholder="Aug/26">
+        <input type="text" id="formPeriodLabel" placeholder="July 26">
       </div>
     </div>
 
@@ -60,12 +60,13 @@
       <button class="btn primary" id="saveReportBtn"><i data-lucide="save"></i> Save report</button>
       <button class="btn" id="clearFormBtn"><i data-lucide="eraser"></i> Clear form</button>
     </div>
+    <p class="hint">Period ID drives sorting and year-to-date totals — keep it in <code>YYYY-MM</code> format.</p>
   </div>
 
   <div class="admin-panel">
     <h2 style="margin-top:0;">Existing reports</h2>
     <div class="field" style="max-width:260px;margin-bottom:10px;">
-      <label>Filter by site</label>
+      <label>Filter by plant</label>
       <select id="reportsSiteFilter"></select>
     </div>
     <ul class="reports-list" id="reportsList"></ul>

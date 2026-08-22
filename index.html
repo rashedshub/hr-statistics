@@ -7,25 +7,71 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
-<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 </head>
 <body>
 
-<div class="topbar">
-  <h1><i data-lucide="bar-chart-3"></i> HR Statistics for <span class="site-name" id="siteNameLabel">—</span></h1>
-  <div class="controls">
-    <select id="siteSelect"></select>
-    <select id="periodSelect"></select>
-    <a class="btn" href="admin.html"><i data-lucide="lock"></i> Admin</a>
+<div class="hs-topbar">
+  <h1 class="hs-title">HR STATISTICS</h1>
+
+  <div class="hs-topbar-item">
+    Period: [ <select id="periodSelect"></select> ]
+  </div>
+
+  <div class="hs-topbar-item hs-topbar-right">
+    Plant: [ <select id="siteSelect"></select> ]
+    <a class="hs-admin-link" href="admin.html" title="Admin">⚙</a>
   </div>
 </div>
 
 <main>
   <div id="stateMsg" class="state-msg">Loading dashboard…</div>
-  <div class="grid" id="grid" style="display:none;"></div>
+
+  <div id="topicsWrap" class="hs-panels" style="display:none;">
+
+    <!-- Leave Consumption -->
+    <div class="stat-panel">
+      <div class="stat-panel-header">Leave Consumption</div>
+      <div class="stat-panel-body">
+        <div class="stat-body-cols">
+          <div class="stat-labels">
+            <div class="stat-row"><span>Total EL (Plan)</span><b id="leaveTotalPlan">–</b></div>
+            <div class="stat-row"><span>This Month</span><b id="leaveMonthActual">–</b></div>
+            <div class="stat-row"><span>YTD</span><b id="leaveYtdActual">–</b></div>
+          </div>
+          <div class="stat-bars">
+            <div class="stat-bars-title">Plan vs Actual</div>
+            <div class="progress-track">
+              <div class="progress-fill" id="leaveMonthBar" style="width:0%;"><span id="leaveMonthPct">0%</span></div>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" id="leaveYtdBar" style="width:0%;"><span id="leaveYtdPct">0%</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="category-tag"><b>Non-Worker</b> – Asst. Officer to above level</div>
+      </div>
+    </div>
+
+    <!-- Sick Leave -->
+    <div class="stat-panel">
+      <div class="stat-panel-header">Sick Leave</div>
+      <div class="stat-panel-body">
+        <div class="stat-body-cols">
+          <div class="stat-labels">
+            <div class="stat-row"><span>This Month</span><b id="sickMonthDays">–</b></div>
+            <div class="stat-row"><span>YTD</span><b id="sickYtdDays">–</b></div>
+          </div>
+          <div class="big-figure-box">
+            <div class="big-figure" id="sickPct">0%</div>
+          </div>
+        </div>
+        <div class="category-tag"><b>Worker</b> – Sewing (Operator)</div>
+      </div>
+    </div>
+
+  </div>
 </main>
 
 <script type="module" src="js/app.js"></script>
-<script>lucide.createIcons();</script>
 </body>
 </html>
