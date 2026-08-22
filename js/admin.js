@@ -28,7 +28,7 @@ const addSiteBtn = document.getElementById("addSiteBtn");
 
 const leaveSite = document.getElementById("leaveSite");
 const leaveYear = document.getElementById("leaveYear");
-const leaveTotalPlanInput = document.getElementById("leaveTotalPlanInput");
+const leaveTotalPlanDisplay = document.getElementById("leaveTotalPlanDisplay");
 const leaveMonthTableBody = document.querySelector("#leaveMonthTable tbody");
 const saveLeaveYearBtn = document.getElementById("saveLeaveYearBtn");
 
@@ -73,6 +73,17 @@ leaveMonthTableBody.innerHTML = MONTHS.map(m => `
     <td><input type="number" step="any" id="leaveMonthPlan_${m.num}"></td>
     <td><input type="number" step="any" id="leaveMonthActual_${m.num}"></td>
   </tr>`).join("");
+
+// Recalculate the Total EL (Plan) display live as any month's Plan changes.
+MONTHS.forEach(m => {
+  document.getElementById(`leaveMonthPlan_${m.num}`).addEventListener("input", updateTotalPlanDisplay);
+});
+
+function updateTotalPlanDisplay() {
+  const total = MONTHS.reduce((sum, m) => sum + (Number(document.getElementById(`leaveMonthPlan_${m.num}`).value) || 0), 0);
+  leaveTotalPlanDisplay.textContent = total.toLocaleString();
+  return total;
+}
 
 // ── Sites ─────────────────────────────────────────────────
 async function refreshSites() {
@@ -145,25 +156,19 @@ function loadLeaveYearTable() {
   const year = leaveYear.value;
   const reports = reportsCache[siteId] || {};
 
-  let totalPlan = "";
-  for (const m of MONTHS) {
-    const rec = reports[periodIdFor(year, m.num)];
-    if (rec && rec.totalElPlan) totalPlan = rec.totalElPlan;
-  }
-  leaveTotalPlanInput.value = totalPlan;
-
   for (const m of MONTHS) {
     const rec = reports[periodIdFor(year, m.num)] || {};
     document.getElementById(`leaveMonthPlan_${m.num}`).value = rec.monthElPlan || "";
     document.getElementById(`leaveMonthActual_${m.num}`).value = rec.monthElActual || "";
   }
+  updateTotalPlanDisplay();
 }
 
 saveLeaveYearBtn.addEventListener("click", async () => {
   const siteId = leaveSite.value;
   if (!siteId) { showToast("Add a plant first"); return; }
   const year = leaveYear.value;
-  const totalPlan = Number(leaveTotalPlanInput.value) || 0;
+  const totalPlan = updateTotalPlanDisplay(); // sum of all 12 months' Plan
 
   saveLeaveYearBtn.disabled = true;
   try {
@@ -181,7 +186,7 @@ saveLeaveYearBtn.addEventListener("click", async () => {
         { merge: true }
       );
     }));
-    showToast(`Saved Leave Consumption for ${year}`);
+    showToast(`Saved Leave Consumption for ${year} (Total EL Plan: ${totalPlan.toLocaleString()})`);
     await fetchSiteReports(siteId);
     await refreshReportsList();
   } catch (err) {

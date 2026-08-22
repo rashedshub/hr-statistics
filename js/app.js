@@ -124,6 +124,74 @@ function setBar(barId, labelId, pct) {
   requestAnimationFrame(() => { bar.style.width = `${clamped}%`; });
 }
 
+// ── Leave Consumption detail modal ─────────────────────────
+const leavePanel = document.getElementById("leavePanel");
+const leaveDetailModal = document.getElementById("leaveDetailModal");
+const leaveDetailClose = document.getElementById("leaveDetailClose");
+const leaveDetailTitle = document.getElementById("leaveDetailTitle");
+const leaveDetailTableBody = document.getElementById("leaveDetailTableBody");
+let leaveDetailChart = null;
+
+leavePanel.addEventListener("click", () => openLeaveDetail(periodSelect.value));
+leaveDetailClose.addEventListener("click", closeLeaveDetail);
+leaveDetailModal.addEventListener("click", (e) => { if (e.target === leaveDetailModal) closeLeaveDetail(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeLeaveDetail(); });
+
+function closeLeaveDetail() {
+  leaveDetailModal.style.display = "none";
+}
+
+const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+function openLeaveDetail(periodId) {
+  const year = periodYear(periodId);
+  const siteName = sites.find(s => s.id === currentSiteId)?.name || "";
+  leaveDetailTitle.textContent = `Leave Consumption — ${siteName}${year ? " " + year : ""}`;
+
+  const months = [];
+  for (let i = 1; i <= 12; i++) {
+    const num = String(i).padStart(2, "0");
+    const id = year ? `${year}-${num}` : null;
+    const rec = (id && reportsById[id]) || {};
+    const plan = Number(rec.monthElPlan) || 0;
+    const actual = Number(rec.monthElActual) || 0;
+    const pct = plan > 0 ? Math.round((actual / plan) * 1000) / 10 : 0;
+    months.push({ label: MONTH_NAMES[i - 1], plan, actual, pct, hasData: !!id && !!reportsById[id] });
+  }
+
+  leaveDetailTableBody.innerHTML = months.map(m => `
+    <tr>
+      <td>${m.label}</td>
+      <td>${m.hasData ? m.plan.toLocaleString() : "—"}</td>
+      <td>${m.hasData ? m.actual.toLocaleString() : "—"}</td>
+      <td>${m.hasData ? m.pct + "%" : "—"}</td>
+    </tr>`).join("");
+
+  const ctx = document.getElementById("leaveDetailChart").getContext("2d");
+  if (leaveDetailChart) leaveDetailChart.destroy();
+  leaveDetailChart = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: months.map(m => m.label.slice(0, 3)),
+      datasets: [
+        { label: "Plan", data: months.map(m => m.plan), backgroundColor: "#a9c4e8", borderRadius: 3 },
+        { label: "Actual", data: months.map(m => m.actual), backgroundColor: "#3b6fae", borderRadius: 3 }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { labels: { font: { size: 11.5 } } } },
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, title: { display: true, text: "EL days" } }
+      }
+    }
+  });
+
+  leaveDetailModal.style.display = "flex";
+}
+
 function syncUrl(siteId, periodId) {
   const params = new URLSearchParams();
   params.set("site", siteId);

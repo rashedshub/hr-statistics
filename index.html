@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
 
@@ -29,8 +30,8 @@
   <div id="topicsWrap" class="hs-panels" style="display:none;">
 
     <!-- Leave Consumption -->
-    <div class="stat-panel">
-      <div class="stat-panel-header">Leave Consumption</div>
+    <div class="stat-panel clickable-panel" id="leavePanel" title="Click for month-by-month detail">
+      <div class="stat-panel-header">Leave Consumption <span class="detail-hint">▸ click for detail</span></div>
       <div class="stat-panel-body">
         <div class="stat-body-cols">
           <div class="stat-labels">
@@ -69,6 +70,23 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- Leave Consumption detail modal -->
+  <div id="leaveDetailModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 id="leaveDetailTitle">Leave Consumption — detail</h3>
+        <button class="modal-close" id="leaveDetailClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="chart-wrap"><canvas id="leaveDetailChart"></canvas></div>
+        <table class="detail-table">
+          <thead><tr><th>Month</th><th>Plan</th><th>Actual</th><th>%</th></tr></thead>
+          <tbody id="leaveDetailTableBody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </main>
 
