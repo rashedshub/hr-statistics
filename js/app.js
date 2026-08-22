@@ -49,8 +49,10 @@ async function loadSites() {
 
 async function loadPeriodsForSite(siteId, wantedPeriod) {
   setState("Loading periods…");
-  const snap = await getDocs(query(collection(db, "sites", siteId, "reports"), orderBy("__name__", "desc")));
-  const periods = snap.docs.map(d => d.id);
+  // Sorted client-side (instead of orderBy in the query) so this never needs
+  // a Firestore composite index, however many sites/reports you add.
+  const snap = await getDocs(collection(db, "sites", siteId, "reports"));
+  const periods = snap.docs.map(d => d.id).sort((a, b) => b.localeCompare(a));
 
   if (periods.length === 0) {
     periodSelect.innerHTML = "";
