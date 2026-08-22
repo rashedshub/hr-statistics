@@ -1,13 +1,17 @@
-// ─────────────────────────────────────────────────────────────
-// Firebase project configuration
-// Replace every value below with the config from:
-// Firebase Console → Project settings → General → Your apps → SDK setup and config
-// ─────────────────────────────────────────────────────────────
-export const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyBICk5dxzI77pktWuaJ2Kd_H-C7rXVes3M",
+  authDomain: "hr-statistics.firebaseapp.com",
+  projectId: "hr-statistics",
+  storageBucket: "hr-statistics.firebasestorage.app",
+  messagingSenderId: "812356967184",
+  appId: "1:812356967184:web:2272aec29f228a59402395"
 };
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
