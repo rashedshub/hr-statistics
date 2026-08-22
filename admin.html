@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — HR Statistics Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body>
+
+<div class="topbar">
+  <h1><i data-lucide="lock"></i> Admin</h1>
+  <div class="controls">
+    <a class="btn" href="index.html"><i data-lucide="arrow-left"></i> Back to dashboard</a>
+    <button class="btn" id="logoutBtn" style="display:none;"><i data-lucide="log-out"></i> Log out</button>
+  </div>
+</div>
+
+<!-- Login -->
+<div class="auth-shell" id="loginShell">
+  <h2>Sign in</h2>
+  <div class="field">
+    <label>Email</label>
+    <input type="email" id="loginEmail" placeholder="you@company.com" autocomplete="username">
+  </div>
+  <div class="field">
+    <label>Password</label>
+    <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+  </div>
+  <div class="error-text" id="loginError"></div>
+  <button class="btn primary" id="loginBtn" style="width:100%;justify-content:center;">Sign in</button>
+  <p class="hint">Admin accounts are created in the Firebase Console → Authentication. There's no public sign-up.</p>
+</div>
+
+<!-- Admin content (shown after login) -->
+<div class="admin-shell" id="adminShell" style="display:none;">
+
+  <div class="admin-panel">
+    <h2 style="margin-top:0;">Sites</h2>
+    <div class="form-grid" style="margin-bottom:14px;">
+      <div class="field">
+        <label>New site name</label>
+        <input type="text" id="newSiteName" placeholder="e.g. YHT">
+      </div>
+      <div class="field" style="justify-content:flex-end;">
+        <button class="btn primary" id="addSiteBtn" style="width:fit-content;">Add site</button>
+      </div>
+    </div>
+    <ul class="reports-list" id="sitesList"></ul>
+  </div>
+
+  <div class="admin-panel">
+    <h2 style="margin-top:0;">Monthly report</h2>
+    <div class="form-grid">
+      <div class="field">
+        <label>Site</label>
+        <select id="formSite"></select>
+      </div>
+      <div class="field">
+        <label>Period (used as ID, e.g. 2026-08)</label>
+        <input type="text" id="formPeriodId" placeholder="2026-08">
+      </div>
+      <div class="field">
+        <label>Period display label</label>
+        <input type="text" id="formPeriodLabel" placeholder="Aug/26">
+      </div>
+    </div>
+
+    <div id="dynamicFormArea"></div>
+
+    <div style="margin-top:18px;display:flex;gap:10px;">
+      <button class="btn primary" id="saveReportBtn"><i data-lucide="save"></i> Save report</button>
+      <button class="btn" id="clearFormBtn"><i data-lucide="eraser"></i> Clear form</button>
+    </div>
+  </div>
+
+  <div class="admin-panel">
+    <h2 style="margin-top:0;">Existing reports</h2>
+    <div class="field" style="max-width:260px;margin-bottom:10px;">
+      <label>Filter by site</label>
+      <select id="reportsSiteFilter"></select>
+    </div>
+    <ul class="reports-list" id="reportsList"></ul>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script type="module" src="js/admin.js"></script>
+<script>lucide.createIcons();</script>
+</body>
+</html>
