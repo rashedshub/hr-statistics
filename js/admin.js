@@ -170,12 +170,13 @@ reportsSiteFilter.addEventListener("change", refreshReportsList);
 async function refreshReportsList() {
   const siteId = reportsSiteFilter.value || (sitesCache[0] && sitesCache[0].id);
   if (!siteId) { reportsList.innerHTML = ""; return; }
-  const snap = await getDocs(query(collection(db, "sites", siteId, "reports"), orderBy("__name__", "desc")));
+  const snap = await getDocs(collection(db, "sites", siteId, "reports"));
   if (snap.empty) {
     reportsList.innerHTML = `<li><span style="color:#8794a8;">No reports for this site yet.</span></li>`;
     return;
   }
-  reportsList.innerHTML = snap.docs.map(d => `
+  const sortedDocs = [...snap.docs].sort((a, b) => b.id.localeCompare(a.id));
+  reportsList.innerHTML = sortedDocs.map(d => `
     <li>
       <span>${d.id} — ${escapeHtml(d.data().period || "")}</span>
       <span class="row-actions">
