@@ -486,3 +486,35 @@ main{padding:20px 28px 48px;}
   color:#1c2c42;
 }
 .category-tag b{font-family:var(--font-display);}
+
+/* ── Month table (Leave Consumption yearly entry) ───────────── */
+.month-table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:16px;
+  font-size:13.5px;
+}
+.month-table th{
+  text-align:left;
+  padding:8px 10px;
+  color:#5a6b82;
+  font-weight:600;
+  border-bottom:2px solid #e2e7ee;
+}
+.month-table td{
+  padding:6px 10px;
+  border-bottom:1px solid #f0f3f7;
+}
+.month-table td:first-child{
+  font-weight:600;
+  color:#1c2c42;
+  white-space:nowrap;
+}
+.month-table input{
+  width:100%;
+  padding:7px 9px;
+  border:1px solid #d9e0ea;
+  border-radius:6px;
+  font-size:13.5px;
+  font-family:var(--font-body);
+}

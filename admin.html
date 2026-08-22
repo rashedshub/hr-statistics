@@ -38,19 +38,52 @@
   </div>
 
   <div class="admin-panel">
-    <h2 style="margin-top:0;">Monthly report</h2>
+    <h2 style="margin-top:0;">Leave Consumption — yearly entry</h2>
+    <p class="hint" style="margin-top:-6px;margin-bottom:14px;">
+      Total EL (Plan) applies for the whole year. Fill in each month's Plan and Actual below, then save once —
+      no need to type month or year anywhere.
+    </p>
+    <div class="form-grid">
+      <div class="field">
+        <label>Plant</label>
+        <select id="leaveSite"></select>
+      </div>
+      <div class="field">
+        <label>Year</label>
+        <select id="leaveYear"></select>
+      </div>
+      <div class="field">
+        <label>Total EL (Plan) — annual</label>
+        <input type="number" step="any" id="leaveTotalPlanInput" placeholder="e.g. 5000">
+      </div>
+    </div>
+
+    <table class="month-table" id="leaveMonthTable">
+      <thead>
+        <tr><th>Month</th><th>This Month Plan</th><th>This Month Actual</th></tr>
+      </thead>
+      <tbody><!-- 12 rows injected by admin.js --></tbody>
+    </table>
+
+    <div style="margin-top:16px;">
+      <button class="btn primary" id="saveLeaveYearBtn"><i data-lucide="save"></i> Save Leave Consumption (whole year)</button>
+    </div>
+  </div>
+
+  <div class="admin-panel">
+    <h2 style="margin-top:0;">Monthly report — other topics</h2>
     <div class="form-grid">
       <div class="field">
         <label>Plant</label>
         <select id="formSite"></select>
       </div>
       <div class="field">
-        <label>Period (used as ID — format YYYY-MM, e.g. 2026-07)</label>
-        <input type="text" id="formPeriodId" placeholder="2026-07">
+        <label>Month</label>
+        <select id="formMonth"></select>
       </div>
       <div class="field">
-        <label>Period display label</label>
-        <input type="text" id="formPeriodLabel" placeholder="July 26">
+        <label>Year</label>
+        <select id="formYear"></select>
       </div>
     </div>
 
@@ -60,7 +93,6 @@
       <button class="btn primary" id="saveReportBtn"><i data-lucide="save"></i> Save report</button>
       <button class="btn" id="clearFormBtn"><i data-lucide="eraser"></i> Clear form</button>
     </div>
-    <p class="hint">Period ID drives sorting and year-to-date totals — keep it in <code>YYYY-MM</code> format.</p>
   </div>
 
   <div class="admin-panel">
