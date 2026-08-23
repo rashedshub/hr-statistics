@@ -156,6 +156,17 @@ function render(siteId, periodId) {
   document.getElementById("manpowerYtdAvg").textContent = ytdAvg.toLocaleString();
   document.getElementById("manpowerBigNum").textContent = closingManpower.toLocaleString();
 
+  // ── Employees Feedback Received ─────────────────────────────
+  const feedbackExternal = Number(current.feedbackExternal) || 0;
+  const feedbackInternal = Number(current.feedbackInternal) || 0;
+  const feedbackTotal = Number(current.feedbackTotal) || (feedbackExternal + feedbackInternal);
+  const ytdFeedbackTotal = ytdSum(periodId, "feedbackTotal");
+
+  document.getElementById("feedbackExternal").textContent = feedbackExternal.toLocaleString();
+  document.getElementById("feedbackInternal").textContent = feedbackInternal.toLocaleString();
+  document.getElementById("feedbackYtdTotal").textContent = ytdFeedbackTotal.toLocaleString();
+  document.getElementById("feedbackBigNum").textContent = feedbackTotal.toLocaleString();
+
   syncUrl(siteId, periodId);
 }
 
@@ -284,6 +295,27 @@ manpowerPanel.addEventListener("click", () => {
     datasets: [
       { key: "workerManpower", label: "Worker", color: "#3b6fae" },
       { key: "nonWorkerManpower", label: "Non-Worker", color: "#e8b23b" }
+    ],
+    chartType: "bar"
+  });
+});
+
+// ── Employees Feedback Received detail ──────────────────────
+const feedbackPanel = document.getElementById("feedbackPanel");
+feedbackPanel.addEventListener("click", () => {
+  const { year, rows } = buildMonthRows(periodSelect.value, ["feedbackExternal", "feedbackInternal", "feedbackTotal"]);
+  const siteName = sites.find(s => s.id === currentSiteId)?.name || "";
+  openDetailModal({
+    title: `Employees Feedback Received — ${siteName}${year ? " " + year : ""}`,
+    rows,
+    columns: [
+      { key: "feedbackExternal", label: "External" },
+      { key: "feedbackInternal", label: "Internal" },
+      { key: "feedbackTotal", label: "Total" }
+    ],
+    datasets: [
+      { key: "feedbackExternal", label: "External", color: "#7C5CFC" },
+      { key: "feedbackInternal", label: "Internal", color: "#C4B5FD" }
     ],
     chartType: "bar"
   });

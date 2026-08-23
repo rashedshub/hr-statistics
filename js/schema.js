@@ -57,6 +57,19 @@ export const TOPICS = [
     ]
   },
 
+  {
+    id: "feedback",
+    title: "Employees Feedback Received",
+    icon: "message-circle",
+    enabled: true,
+    customAdminUI: true, // has its own year-at-a-glance table in admin.js — skipped by the generic form
+    fields: [
+      { key: "feedbackExternal", label: "External channel (this month)", type: "number" },
+      { key: "feedbackInternal", label: "Internal channel (this month)", type: "number" },
+      { key: "feedbackTotal", label: "Total (derived: External + Internal)", type: "number" }
+    ]
+  },
+
   // ── Not built yet — next topics to add, one at a time ──────
   { id: "directManpower", title: "Direct Manpower", icon: "user-check", enabled: false, fields: [] },
   { id: "manpowerShortage", title: "Manpower excess/(shortage)", icon: "shield-alert", enabled: false, fields: [] },
@@ -69,7 +82,6 @@ export const TOPICS = [
   { id: "unpaid", title: "Employees with unpaid wage", icon: "credit-card-off", enabled: false, fields: [] },
   { id: "zt", title: "ZT issues", icon: "ban", enabled: false, fields: [] },
   { id: "hours", title: "Workers with excessive working hours", icon: "clock", enabled: false, fields: [] },
-  { id: "feedback", title: "Employees Feedback Received", icon: "message-circle", enabled: false, fields: [] },
   { id: "oneonone", title: "Workers one-on-one interview", icon: "users-round", enabled: false, fields: [] },
   { id: "disciplinary", title: "Outstanding Disciplinary", icon: "scale", enabled: false, fields: [] }
 ];

@@ -16,6 +16,7 @@
   --teal-tint:#E4F5F3;
   --amber:#DB9A2C;      /* Sick Leave accent */
   --amber-tint:#FBF1DF;
+  --violet:#7C5CFC;     /* Employees Feedback Received accent */
   --positive:#1FA971;
   --negative:#D8514F;
   --negative-tint:#FBEAEA;
@@ -113,15 +114,12 @@ body{
 ───────────────────────────────────────────────────────────── */
 .hs-panels{
   display:grid;
-  grid-template-columns:repeat(3, 1fr);
+  grid-template-columns:repeat(auto-fit, minmax(270px, 1fr));
   gap:20px;
   padding:24px 28px 48px;
   max-width:1200px;
   margin:0 auto;
   align-items:start;
-}
-@media (max-width:960px){
-  .hs-panels{grid-template-columns:1fr 1fr;}
 }
 @media (max-width:640px){
   .hs-panels{grid-template-columns:1fr;padding:18px 16px 40px;}
@@ -148,6 +146,7 @@ body{
 #manpowerPanel{--accent:var(--brand);}
 #leavePanel{--accent:var(--teal);}
 #sickPanel{--accent:var(--amber);}
+#feedbackPanel{--accent:var(--violet);}
 
 .stat-panel-header{
   display:flex;

@@ -100,6 +100,34 @@
   </div>
 
   <div class="admin-panel">
+    <h2 style="margin-top:0;">Employees Feedback Received — yearly entry</h2>
+    <p class="hint" style="margin-top:-6px;margin-bottom:14px;">
+      Enter each month's External and Internal channel counts — Total is calculated automatically.
+    </p>
+    <div class="form-grid">
+      <div class="field">
+        <label>Plant</label>
+        <select id="feedbackSite"></select>
+      </div>
+      <div class="field">
+        <label>Year</label>
+        <select id="feedbackYear"></select>
+      </div>
+    </div>
+
+    <table class="month-table" id="feedbackMonthTable">
+      <thead>
+        <tr><th>Month</th><th>External</th><th>Internal</th><th>Total (auto)</th></tr>
+      </thead>
+      <tbody><!-- 12 rows injected by admin.js --></tbody>
+    </table>
+
+    <div style="margin-top:16px;">
+      <button class="btn primary" id="saveFeedbackYearBtn"><i data-lucide="save"></i> Save Feedback Received (whole year)</button>
+    </div>
+  </div>
+
+  <div class="admin-panel">
     <h2 style="margin-top:0;">Monthly report — other topics</h2>
     <div class="form-grid">
       <div class="field">

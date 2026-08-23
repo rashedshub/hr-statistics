@@ -37,6 +37,11 @@ const manpowerYear = document.getElementById("manpowerYear");
 const manpowerMonthTableBody = document.querySelector("#manpowerMonthTable tbody");
 const saveManpowerYearBtn = document.getElementById("saveManpowerYearBtn");
 
+const feedbackSite = document.getElementById("feedbackSite");
+const feedbackYear = document.getElementById("feedbackYear");
+const feedbackMonthTableBody = document.querySelector("#feedbackMonthTable tbody");
+const saveFeedbackYearBtn = document.getElementById("saveFeedbackYearBtn");
+
 const formSite = document.getElementById("formSite");
 const formMonth = document.getElementById("formMonth");
 const formYear = document.getElementById("formYear");
@@ -73,6 +78,8 @@ formMonth.innerHTML = MONTHS.map(m => `<option value="${m.num}">${m.name}</optio
 formMonth.value = CURRENT_MONTH;
 manpowerYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).join("");
 manpowerYear.value = CURRENT_YEAR;
+feedbackYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).join("");
+feedbackYear.value = CURRENT_YEAR;
 
 leaveMonthTableBody.innerHTML = MONTHS.map(m => `
   <tr>
@@ -103,6 +110,28 @@ function updateManpowerRowTotal(num) {
   return total;
 }
 
+feedbackMonthTableBody.innerHTML = MONTHS.map(m => `
+  <tr>
+    <td>${m.name}</td>
+    <td><input type="number" step="any" id="feedbackExternal_${m.num}"></td>
+    <td><input type="number" step="any" id="feedbackInternal_${m.num}"></td>
+    <td><span class="row-total" id="feedbackTotal_${m.num}">0</span></td>
+  </tr>`).join("");
+
+MONTHS.forEach(m => {
+  const recalc = () => updateFeedbackRowTotal(m.num);
+  document.getElementById(`feedbackExternal_${m.num}`).addEventListener("input", recalc);
+  document.getElementById(`feedbackInternal_${m.num}`).addEventListener("input", recalc);
+});
+
+function updateFeedbackRowTotal(num) {
+  const external = Number(document.getElementById(`feedbackExternal_${num}`).value) || 0;
+  const internal = Number(document.getElementById(`feedbackInternal_${num}`).value) || 0;
+  const total = external + internal;
+  document.getElementById(`feedbackTotal_${num}`).textContent = total.toLocaleString();
+  return total;
+}
+
 // Recalculate the Total EL (Plan) display live as any month's Plan changes.
 MONTHS.forEach(m => {
   document.getElementById(`leaveMonthPlan_${m.num}`).addEventListener("input", updateTotalPlanDisplay);
@@ -130,6 +159,7 @@ async function refreshSites() {
   const options = sitesCache.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
   leaveSite.innerHTML = options;
   manpowerSite.innerHTML = options;
+  feedbackSite.innerHTML = options;
   formSite.innerHTML = options;
   reportsSiteFilter.innerHTML = options;
 
@@ -141,6 +171,7 @@ async function refreshSites() {
     await fetchSiteReports(leaveSite.value);
     loadLeaveYearTable();
     loadManpowerYearTable();
+    loadFeedbackYearTable();
     await refreshReportsList();
   }
 }
@@ -280,6 +311,58 @@ saveManpowerYearBtn.addEventListener("click", async () => {
   }
 });
 
+// ── Employees Feedback Received — yearly table ─────────────
+feedbackSite.addEventListener("change", async () => {
+  await fetchSiteReports(feedbackSite.value);
+  loadFeedbackYearTable();
+});
+feedbackYear.addEventListener("change", loadFeedbackYearTable);
+
+function loadFeedbackYearTable() {
+  const siteId = feedbackSite.value;
+  const year = feedbackYear.value;
+  const reports = reportsCache[siteId] || {};
+
+  for (const m of MONTHS) {
+    const rec = reports[periodIdFor(year, m.num)] || {};
+    document.getElementById(`feedbackExternal_${m.num}`).value = rec.feedbackExternal || "";
+    document.getElementById(`feedbackInternal_${m.num}`).value = rec.feedbackInternal || "";
+    updateFeedbackRowTotal(m.num);
+  }
+}
+
+saveFeedbackYearBtn.addEventListener("click", async () => {
+  const siteId = feedbackSite.value;
+  if (!siteId) { showToast("Add a plant first"); return; }
+  const year = feedbackYear.value;
+
+  saveFeedbackYearBtn.disabled = true;
+  try {
+    await Promise.all(MONTHS.map(m => {
+      const externalVal = Number(document.getElementById(`feedbackExternal_${m.num}`).value) || 0;
+      const internalVal = Number(document.getElementById(`feedbackInternal_${m.num}`).value) || 0;
+      return setDoc(
+        doc(db, "sites", siteId, "reports", periodIdFor(year, m.num)),
+        {
+          period: periodLabelFor(year, m.name),
+          feedbackExternal: externalVal,
+          feedbackInternal: internalVal,
+          feedbackTotal: externalVal + internalVal
+        },
+        { merge: true }
+      );
+    }));
+    showToast(`Saved Employees Feedback Received for ${year}`);
+    await fetchSiteReports(siteId);
+    await refreshReportsList();
+  } catch (err) {
+    console.error(err);
+    showToast("Save failed — check console / security rules");
+  } finally {
+    saveFeedbackYearBtn.disabled = false;
+  }
+});
+
 // ── Generic monthly form (everything except Leave) ─────────
 function buildForm() {
   let html = "";
@@ -390,6 +473,7 @@ async function deleteReport(siteId, periodId) {
   await refreshReportsList();
   if (siteId === leaveSite.value) loadLeaveYearTable();
   if (siteId === manpowerSite.value) loadManpowerYearTable();
+  if (siteId === feedbackSite.value) loadFeedbackYearTable();
 }
 
 // ── Utils ─────────────────────────────────────────────────
