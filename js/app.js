@@ -45,6 +45,23 @@ async function loadSites() {
   await loadReportsForSite(currentSiteId, params.get("period"));
 }
 
+function currentPeriodId() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+// Always prefer the real current month; if no data has been entered for it yet,
+// fall back to the most recent month at or before now that does have data;
+// only if nothing qualifies do we fall back to whatever's newest overall.
+function pickDefaultPeriod(periods, wantedFromUrl) {
+  if (wantedFromUrl && periods.includes(wantedFromUrl)) return wantedFromUrl;
+  const nowId = currentPeriodId();
+  if (periods.includes(nowId)) return nowId;
+  const upToNow = periods.filter(p => p <= nowId).sort();
+  if (upToNow.length) return upToNow[upToNow.length - 1];
+  return periods[0];
+}
+
 async function loadReportsForSite(siteId, wantedPeriod) {
   setState("Loading…");
   const snap = await getDocs(collection(db, "sites", siteId, "reports"));
@@ -62,7 +79,7 @@ async function loadReportsForSite(siteId, wantedPeriod) {
   periodSelect.innerHTML = periods.map(p =>
     `<option value="${p}">${escapeHtml(reportsById[p].period || p)}</option>`
   ).join("");
-  const chosenPeriod = periods.includes(wantedPeriod) ? wantedPeriod : periods[0];
+  const chosenPeriod = pickDefaultPeriod(periods, wantedPeriod);
   periodSelect.value = chosenPeriod;
 
   render(siteId, chosenPeriod);
@@ -114,7 +131,9 @@ function render(siteId, periodId) {
   document.getElementById("sickPct").textContent = `${sickPct}%`;
 
   // ── Total Manpower ──────────────────────────────────────────
-  const closingManpower = Number(current.closingManpower) || 0;
+  const workerManpower = Number(current.workerManpower) || 0;
+  const nonWorkerManpower = Number(current.nonWorkerManpower) || 0;
+  const closingManpower = Number(current.closingManpower) || (workerManpower + nonWorkerManpower);
   const year = periodYear(periodId);
   let prevManpower = null;
   if (year) {
@@ -131,6 +150,8 @@ function render(siteId, periodId) {
     ? Math.round(ytdIds.reduce((sum, id) => sum + Number(reportsById[id].closingManpower), 0) / ytdIds.length)
     : 0;
 
+  document.getElementById("manpowerWorker").textContent = workerManpower.toLocaleString();
+  document.getElementById("manpowerNonWorker").textContent = nonWorkerManpower.toLocaleString();
   document.getElementById("manpowerThisMonth").textContent = closingManpower.toLocaleString();
   document.getElementById("manpowerPrevMonth").textContent = prevManpower === null ? "—" : prevManpower.toLocaleString();
   document.getElementById("manpowerYtdAvg").textContent = ytdAvg.toLocaleString();
@@ -251,14 +272,21 @@ leavePanel.addEventListener("click", () => {
 // ── Total Manpower detail ───────────────────────────────────
 const manpowerPanel = document.getElementById("manpowerPanel");
 manpowerPanel.addEventListener("click", () => {
-  const { year, rows } = buildMonthRows(periodSelect.value, ["closingManpower"]);
+  const { year, rows } = buildMonthRows(periodSelect.value, ["workerManpower", "nonWorkerManpower", "closingManpower"]);
   const siteName = sites.find(s => s.id === currentSiteId)?.name || "";
   openDetailModal({
     title: `Total Manpower — ${siteName}${year ? " " + year : ""}`,
     rows,
-    columns: [{ key: "closingManpower", label: "Closing Manpower" }],
-    datasets: [{ key: "closingManpower", label: "Closing Manpower", color: "#2fb85c" }],
-    chartType: "line"
+    columns: [
+      { key: "workerManpower", label: "Worker" },
+      { key: "nonWorkerManpower", label: "Non-Worker" },
+      { key: "closingManpower", label: "Total" }
+    ],
+    datasets: [
+      { key: "workerManpower", label: "Worker", color: "#3b6fae" },
+      { key: "nonWorkerManpower", label: "Non-Worker", color: "#e8b23b" }
+    ],
+    chartType: "bar"
   });
 });
 

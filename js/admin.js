@@ -84,8 +84,24 @@ leaveMonthTableBody.innerHTML = MONTHS.map(m => `
 manpowerMonthTableBody.innerHTML = MONTHS.map(m => `
   <tr>
     <td>${m.name}</td>
-    <td><input type="number" step="any" id="manpowerClosing_${m.num}"></td>
+    <td><input type="number" step="any" id="manpowerWorker_${m.num}"></td>
+    <td><input type="number" step="any" id="manpowerNonWorker_${m.num}"></td>
+    <td><span class="row-total" id="manpowerTotal_${m.num}">0</span></td>
   </tr>`).join("");
+
+MONTHS.forEach(m => {
+  const recalc = () => updateManpowerRowTotal(m.num);
+  document.getElementById(`manpowerWorker_${m.num}`).addEventListener("input", recalc);
+  document.getElementById(`manpowerNonWorker_${m.num}`).addEventListener("input", recalc);
+});
+
+function updateManpowerRowTotal(num) {
+  const worker = Number(document.getElementById(`manpowerWorker_${num}`).value) || 0;
+  const nonWorker = Number(document.getElementById(`manpowerNonWorker_${num}`).value) || 0;
+  const total = worker + nonWorker;
+  document.getElementById(`manpowerTotal_${num}`).textContent = total.toLocaleString();
+  return total;
+}
 
 // Recalculate the Total EL (Plan) display live as any month's Plan changes.
 MONTHS.forEach(m => {
@@ -226,7 +242,9 @@ function loadManpowerYearTable() {
 
   for (const m of MONTHS) {
     const rec = reports[periodIdFor(year, m.num)] || {};
-    document.getElementById(`manpowerClosing_${m.num}`).value = rec.closingManpower || "";
+    document.getElementById(`manpowerWorker_${m.num}`).value = rec.workerManpower || "";
+    document.getElementById(`manpowerNonWorker_${m.num}`).value = rec.nonWorkerManpower || "";
+    updateManpowerRowTotal(m.num);
   }
 }
 
@@ -238,12 +256,15 @@ saveManpowerYearBtn.addEventListener("click", async () => {
   saveManpowerYearBtn.disabled = true;
   try {
     await Promise.all(MONTHS.map(m => {
-      const closingVal = Number(document.getElementById(`manpowerClosing_${m.num}`).value) || 0;
+      const workerVal = Number(document.getElementById(`manpowerWorker_${m.num}`).value) || 0;
+      const nonWorkerVal = Number(document.getElementById(`manpowerNonWorker_${m.num}`).value) || 0;
       return setDoc(
         doc(db, "sites", siteId, "reports", periodIdFor(year, m.num)),
         {
           period: periodLabelFor(year, m.name),
-          closingManpower: closingVal
+          workerManpower: workerVal,
+          nonWorkerManpower: nonWorkerVal,
+          closingManpower: workerVal + nonWorkerVal
         },
         { merge: true }
       );

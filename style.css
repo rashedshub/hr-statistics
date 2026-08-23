@@ -582,3 +582,10 @@ main{padding:20px 28px 48px;}
 }
 .detail-table td{padding:7px 10px;border-bottom:1px solid #f0f3f7;color:#1c2c42;}
 .detail-table td:first-child{font-weight:600;}
+
+.row-total{
+  display:inline-block;
+  padding:7px 9px;
+  font-weight:600;
+  color:#1c2c42;
+}

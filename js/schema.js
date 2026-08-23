@@ -51,7 +51,9 @@ export const TOPICS = [
     enabled: true,
     customAdminUI: true, // has its own year-at-a-glance table in admin.js — skipped by the generic form
     fields: [
-      { key: "closingManpower", label: "Closing Manpower (month-end headcount)", type: "number" }
+      { key: "workerManpower", label: "Worker (headcount)", type: "number" },
+      { key: "nonWorkerManpower", label: "Non-Worker (headcount)", type: "number" },
+      { key: "closingManpower", label: "Total closing manpower (derived: Worker + Non-Worker)", type: "number" }
     ]
   },
 
