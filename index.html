@@ -8,19 +8,20 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 </head>
 <body>
 
 <div class="hs-topbar">
-  <h1 class="hs-title">HR STATISTICS</h1>
+  <h1 class="hs-title">HR Statistics</h1>
 
   <div class="hs-topbar-item">
-    Period: [ <select id="periodSelect"></select> ]
+    Period <select id="periodSelect"></select>
   </div>
 
   <div class="hs-topbar-item hs-topbar-right">
-    Plant: [ <select id="siteSelect"></select> ]
-    <a class="hs-admin-link" href="admin.html" title="Admin">⚙</a>
+    Plant <select id="siteSelect"></select>
+    <a class="hs-admin-link" href="admin.html" title="Admin"><i data-lucide="settings"></i></a>
   </div>
 </div>
 
@@ -30,63 +31,69 @@
   <div id="topicsWrap" class="hs-panels" style="display:none;">
 
     <!-- Total Manpower -->
-    <div class="stat-panel clickable-panel" id="manpowerPanel" title="Click for month-by-month detail">
-      <div class="stat-panel-header">Total Manpower <span class="detail-hint">▸ click for detail</span></div>
-      <div class="stat-panel-body">
-        <div class="stat-body-cols">
-          <div class="stat-labels">
-            <div class="stat-row"><span>Worker</span><b id="manpowerWorker">–</b></div>
-            <div class="stat-row"><span>Non-Worker</span><b id="manpowerNonWorker">–</b></div>
-            <div class="stat-row"><span>This Month (total)</span><b id="manpowerThisMonth">–</b></div>
-            <div class="stat-row"><span>Previous Month</span><b id="manpowerPrevMonth">–</b></div>
-            <div class="stat-row"><span>YTD Average</span><b id="manpowerYtdAvg">–</b></div>
-          </div>
-          <div class="big-figure-box" style="width:160px;">
-            <div class="big-figure" id="manpowerBigNum" style="font-size:30px;">–</div>
-          </div>
-        </div>
+    <div class="stat-panel clickable-panel" id="manpowerPanel" tabindex="0" title="Click for month-by-month detail">
+      <div class="stat-panel-header">
+        <span class="card-icon-badge"><i data-lucide="users"></i></span>
+        <span class="card-eyebrow">Total Manpower</span>
+        <span class="card-chevron"><i data-lucide="chevron-right"></i></span>
+      </div>
+
+      <div class="hero-figure tabular" id="manpowerBigNum">–</div>
+      <div class="hero-label">This month, total headcount</div>
+
+      <div class="stat-divider"></div>
+
+      <div class="stat-grid-2">
+        <div class="mini-stat"><span>Worker</span><b class="tabular" id="manpowerWorker">–</b></div>
+        <div class="mini-stat"><span>Non-Worker</span><b class="tabular" id="manpowerNonWorker">–</b></div>
+        <div class="mini-stat"><span>Previous month</span><b class="tabular" id="manpowerPrevMonth">–</b></div>
+        <div class="mini-stat"><span>YTD average</span><b class="tabular" id="manpowerYtdAvg">–</b></div>
       </div>
     </div>
 
     <!-- Leave Consumption -->
-    <div class="stat-panel clickable-panel" id="leavePanel" title="Click for month-by-month detail">
-      <div class="stat-panel-header">Leave Consumption <span class="detail-hint">▸ click for detail</span></div>
-      <div class="stat-panel-body">
-        <div class="stat-body-cols">
-          <div class="stat-labels">
-            <div class="stat-row"><span>Total EL (Plan)</span><b id="leaveTotalPlan">–</b></div>
-            <div class="stat-row"><span>This Month</span><b id="leaveMonthActual">–</b></div>
-            <div class="stat-row"><span>YTD</span><b id="leaveYtdActual">–</b></div>
-          </div>
-          <div class="stat-bars">
-            <div class="stat-bars-title">Plan vs Actual</div>
-            <div class="progress-track">
-              <div class="progress-fill" id="leaveMonthBar" style="width:0%;"><span id="leaveMonthPct">0%</span></div>
-            </div>
-            <div class="progress-track">
-              <div class="progress-fill" id="leaveYtdBar" style="width:0%;"><span id="leaveYtdPct">0%</span></div>
-            </div>
-          </div>
-        </div>
-        <div class="category-tag"><b>Non-Worker</b> – Asst. Officer to above level</div>
+    <div class="stat-panel clickable-panel" id="leavePanel" tabindex="0" title="Click for month-by-month detail">
+      <div class="stat-panel-header">
+        <span class="card-icon-badge"><i data-lucide="calendar-clock"></i></span>
+        <span class="card-eyebrow">Leave Consumption</span>
+        <span class="card-chevron"><i data-lucide="chevron-right"></i></span>
       </div>
+
+      <div class="stat-grid-2" style="margin-bottom:16px;">
+        <div class="mini-stat"><span>Total EL (Plan)</span><b class="tabular" id="leaveTotalPlan">–</b></div>
+        <div class="mini-stat"><span>This month actual</span><b class="tabular" id="leaveMonthActual">–</b></div>
+        <div class="mini-stat" style="grid-column:1/-1;"><span>YTD actual</span><b class="tabular" id="leaveYtdActual">–</b></div>
+      </div>
+
+      <div class="stat-divider"></div>
+
+      <div class="progress-row"><span>This month vs plan</span><b class="tabular" id="leaveMonthPct">0%</b></div>
+      <div class="progress-track"><div class="progress-fill" id="leaveMonthBar" style="width:0%;"></div></div>
+
+      <div class="progress-row" style="margin-top:12px;"><span>Year-to-date vs plan</span><b class="tabular" id="leaveYtdPct">0%</b></div>
+      <div class="progress-track"><div class="progress-fill" id="leaveYtdBar" style="width:0%;"></div></div>
+
+      <div class="category-tag"><b>Non-Worker</b> – Asst. Officer to above level</div>
     </div>
 
     <!-- Sick Leave -->
-    <div class="stat-panel">
-      <div class="stat-panel-header">Sick Leave</div>
-      <div class="stat-panel-body">
-        <div class="stat-body-cols">
-          <div class="stat-labels">
-            <div class="stat-row"><span>This Month</span><b id="sickMonthDays">–</b></div>
-            <div class="stat-row"><span>YTD</span><b id="sickYtdDays">–</b></div>
-          </div>
-          <div class="big-figure-box">
-            <div class="big-figure" id="sickPct">0%</div>
-          </div>
-        </div>
-        <div class="category-tag"><b>Worker</b> – Sewing (Operator)</div>
+    <div class="stat-panel" id="sickPanel">
+      <div class="stat-panel-header">
+        <span class="card-icon-badge"><i data-lucide="thermometer"></i></span>
+        <span class="card-eyebrow">Sick Leave</span>
       </div>
+
+      <div class="hero-figure tabular" id="sickPct" style="color:var(--accent);">0%</div>
+      <div class="hero-label">Employees on sick leave this month</div>
+
+      <div class="stat-divider"></div>
+
+      <div class="stat-grid-2">
+        <div class="mini-stat"><span>Sick days this month</span><b class="tabular" id="sickMonthDays">–</b></div>
+        <div class="mini-stat"><span>Sick days YTD</span><b class="tabular" id="sickYtdDays">–</b></div>
+      </div>
+
+      <div class="category-tag"><b>Worker</b> – Sewing (Operator)</div>
     </div>
 
   </div>
@@ -110,5 +117,6 @@
 </main>
 
 <script type="module" src="js/app.js"></script>
+<script>lucide.createIcons();</script>
 </body>
 </html>

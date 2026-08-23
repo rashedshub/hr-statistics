@@ -152,7 +152,6 @@ function render(siteId, periodId) {
 
   document.getElementById("manpowerWorker").textContent = workerManpower.toLocaleString();
   document.getElementById("manpowerNonWorker").textContent = nonWorkerManpower.toLocaleString();
-  document.getElementById("manpowerThisMonth").textContent = closingManpower.toLocaleString();
   document.getElementById("manpowerPrevMonth").textContent = prevManpower === null ? "—" : prevManpower.toLocaleString();
   document.getElementById("manpowerYtdAvg").textContent = ytdAvg.toLocaleString();
   document.getElementById("manpowerBigNum").textContent = closingManpower.toLocaleString();
