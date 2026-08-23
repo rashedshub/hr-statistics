@@ -72,6 +72,34 @@
   </div>
 
   <div class="admin-panel">
+    <h2 style="margin-top:0;">Total Manpower — yearly entry</h2>
+    <p class="hint" style="margin-top:-6px;margin-bottom:14px;">
+      Enter each month's closing (month-end) headcount — no need to type month or year.
+    </p>
+    <div class="form-grid">
+      <div class="field">
+        <label>Plant</label>
+        <select id="manpowerSite"></select>
+      </div>
+      <div class="field">
+        <label>Year</label>
+        <select id="manpowerYear"></select>
+      </div>
+    </div>
+
+    <table class="month-table" id="manpowerMonthTable">
+      <thead>
+        <tr><th>Month</th><th>Closing Manpower</th></tr>
+      </thead>
+      <tbody><!-- 12 rows injected by admin.js --></tbody>
+    </table>
+
+    <div style="margin-top:16px;">
+      <button class="btn primary" id="saveManpowerYearBtn"><i data-lucide="save"></i> Save Total Manpower (whole year)</button>
+    </div>
+  </div>
+
+  <div class="admin-panel">
     <h2 style="margin-top:0;">Monthly report — other topics</h2>
     <div class="form-grid">
       <div class="field">

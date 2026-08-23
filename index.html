@@ -70,20 +70,37 @@
       </div>
     </div>
 
+    <!-- Total Manpower -->
+    <div class="stat-panel clickable-panel" id="manpowerPanel" title="Click for month-by-month detail">
+      <div class="stat-panel-header">Total Manpower <span class="detail-hint">▸ click for detail</span></div>
+      <div class="stat-panel-body">
+        <div class="stat-body-cols">
+          <div class="stat-labels">
+            <div class="stat-row"><span>This Month (closing)</span><b id="manpowerThisMonth">–</b></div>
+            <div class="stat-row"><span>Previous Month</span><b id="manpowerPrevMonth">–</b></div>
+            <div class="stat-row"><span>YTD Average</span><b id="manpowerYtdAvg">–</b></div>
+          </div>
+          <div class="big-figure-box" style="width:160px;">
+            <div class="big-figure" id="manpowerBigNum" style="font-size:30px;">–</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
-  <!-- Leave Consumption detail modal -->
-  <div id="leaveDetailModal" class="modal-overlay" style="display:none;">
+  <!-- Reusable month-by-month detail modal -->
+  <div id="detailModal" class="modal-overlay" style="display:none;">
     <div class="modal-box">
       <div class="modal-header">
-        <h3 id="leaveDetailTitle">Leave Consumption — detail</h3>
-        <button class="modal-close" id="leaveDetailClose">&times;</button>
+        <h3 id="detailModalTitle">Detail</h3>
+        <button class="modal-close" id="detailModalClose">&times;</button>
       </div>
       <div class="modal-body">
-        <div class="chart-wrap"><canvas id="leaveDetailChart"></canvas></div>
+        <div class="chart-wrap"><canvas id="detailModalChart"></canvas></div>
         <table class="detail-table">
-          <thead><tr><th>Month</th><th>Plan</th><th>Actual</th><th>%</th></tr></thead>
-          <tbody id="leaveDetailTableBody"></tbody>
+          <thead id="detailModalTableHead"></thead>
+          <tbody id="detailModalTableBody"></tbody>
         </table>
       </div>
     </div>

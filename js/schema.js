@@ -44,9 +44,18 @@ export const TOPICS = [
       { key: "monthHeadcount", label: "This Month — total headcount", type: "number" }
     ]
   },
+  {
+    id: "manpower",
+    title: "Total Manpower",
+    icon: "users",
+    enabled: true,
+    customAdminUI: true, // has its own year-at-a-glance table in admin.js — skipped by the generic form
+    fields: [
+      { key: "closingManpower", label: "Closing Manpower (month-end headcount)", type: "number" }
+    ]
+  },
 
   // ── Not built yet — next topics to add, one at a time ──────
-  { id: "manpower", title: "Manpower", icon: "users", enabled: false, fields: [] },
   { id: "directManpower", title: "Direct Manpower", icon: "user-check", enabled: false, fields: [] },
   { id: "manpowerShortage", title: "Manpower excess/(shortage)", icon: "shield-alert", enabled: false, fields: [] },
   { id: "present", title: "Present", icon: "user-round-check", enabled: false, fields: [] },

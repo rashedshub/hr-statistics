@@ -113,6 +113,29 @@ function render(siteId, periodId) {
   document.getElementById("sickYtdDays").textContent = ytdSickDays.toLocaleString();
   document.getElementById("sickPct").textContent = `${sickPct}%`;
 
+  // ── Total Manpower ──────────────────────────────────────────
+  const closingManpower = Number(current.closingManpower) || 0;
+  const year = periodYear(periodId);
+  let prevManpower = null;
+  if (year) {
+    const monthNum = parseInt(periodId.slice(5, 7), 10);
+    if (monthNum > 1) {
+      const prevId = `${year}-${String(monthNum - 1).padStart(2, "0")}`;
+      if (reportsById[prevId]) prevManpower = Number(reportsById[prevId].closingManpower) || 0;
+    }
+  }
+  let ytdIds = Object.keys(reportsById);
+  if (year) ytdIds = ytdIds.filter(id => periodYear(id) === year);
+  ytdIds = ytdIds.filter(id => id <= periodId && Number(reportsById[id].closingManpower) > 0);
+  const ytdAvg = ytdIds.length
+    ? Math.round(ytdIds.reduce((sum, id) => sum + Number(reportsById[id].closingManpower), 0) / ytdIds.length)
+    : 0;
+
+  document.getElementById("manpowerThisMonth").textContent = closingManpower.toLocaleString();
+  document.getElementById("manpowerPrevMonth").textContent = prevManpower === null ? "—" : prevManpower.toLocaleString();
+  document.getElementById("manpowerYtdAvg").textContent = ytdAvg.toLocaleString();
+  document.getElementById("manpowerBigNum").textContent = closingManpower.toLocaleString();
+
   syncUrl(siteId, periodId);
 }
 
@@ -124,59 +147,70 @@ function setBar(barId, labelId, pct) {
   requestAnimationFrame(() => { bar.style.width = `${clamped}%`; });
 }
 
-// ── Leave Consumption detail modal ─────────────────────────
-const leavePanel = document.getElementById("leavePanel");
-const leaveDetailModal = document.getElementById("leaveDetailModal");
-const leaveDetailClose = document.getElementById("leaveDetailClose");
-const leaveDetailTitle = document.getElementById("leaveDetailTitle");
-const leaveDetailTableBody = document.getElementById("leaveDetailTableBody");
-let leaveDetailChart = null;
+// ── Reusable month-by-month detail modal ───────────────────
+const detailModal = document.getElementById("detailModal");
+const detailModalClose = document.getElementById("detailModalClose");
+const detailModalTitle = document.getElementById("detailModalTitle");
+const detailModalTableHead = document.getElementById("detailModalTableHead");
+const detailModalTableBody = document.getElementById("detailModalTableBody");
+let detailChart = null;
 
-leavePanel.addEventListener("click", () => openLeaveDetail(periodSelect.value));
-leaveDetailClose.addEventListener("click", closeLeaveDetail);
-leaveDetailModal.addEventListener("click", (e) => { if (e.target === leaveDetailModal) closeLeaveDetail(); });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeLeaveDetail(); });
+detailModalClose.addEventListener("click", closeDetailModal);
+detailModal.addEventListener("click", (e) => { if (e.target === detailModal) closeDetailModal(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDetailModal(); });
 
-function closeLeaveDetail() {
-  leaveDetailModal.style.display = "none";
+function closeDetailModal() {
+  detailModal.style.display = "none";
 }
 
 const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 
-function openLeaveDetail(periodId) {
+// Builds the 12-month row data for the currently selected year, using
+// whichever fields the caller asks for (each becomes a table column + chart series).
+function buildMonthRows(periodId, fieldKeys) {
   const year = periodYear(periodId);
-  const siteName = sites.find(s => s.id === currentSiteId)?.name || "";
-  leaveDetailTitle.textContent = `Leave Consumption — ${siteName}${year ? " " + year : ""}`;
-
-  const months = [];
+  const rows = [];
   for (let i = 1; i <= 12; i++) {
     const num = String(i).padStart(2, "0");
     const id = year ? `${year}-${num}` : null;
-    const rec = (id && reportsById[id]) || {};
-    const plan = Number(rec.monthElPlan) || 0;
-    const actual = Number(rec.monthElActual) || 0;
-    const pct = plan > 0 ? Math.round((actual / plan) * 1000) / 10 : 0;
-    months.push({ label: MONTH_NAMES[i - 1], plan, actual, pct, hasData: !!id && !!reportsById[id] });
+    const rec = (id && reportsById[id]) || null;
+    const row = { label: MONTH_NAMES[i - 1], hasData: !!rec };
+    fieldKeys.forEach(k => { row[k] = rec ? (Number(rec[k]) || 0) : 0; });
+    rows.push(row);
   }
+  return { year, rows };
+}
 
-  leaveDetailTableBody.innerHTML = months.map(m => `
-    <tr>
-      <td>${m.label}</td>
-      <td>${m.hasData ? m.plan.toLocaleString() : "—"}</td>
-      <td>${m.hasData ? m.actual.toLocaleString() : "—"}</td>
-      <td>${m.hasData ? m.pct + "%" : "—"}</td>
-    </tr>`).join("");
+// config = { title, columns: [{key,label,format?}], datasets: [{key,label,color}], chartType }
+function openDetailModal(config) {
+  detailModalTitle.textContent = config.title;
 
-  const ctx = document.getElementById("leaveDetailChart").getContext("2d");
-  if (leaveDetailChart) leaveDetailChart.destroy();
-  leaveDetailChart = new Chart(ctx, {
-    type: "bar",
+  const headCells = ["Month", ...config.columns.map(c => c.label)];
+  detailModalTableHead.innerHTML = `<tr>${headCells.map(h => `<th>${h}</th>`).join("")}</tr>`;
+
+  detailModalTableBody.innerHTML = config.rows.map(row => {
+    const cells = config.columns.map(c => {
+      if (!row.hasData) return "<td>—</td>";
+      const val = c.format ? c.format(row) : (row[c.key] ?? 0).toLocaleString();
+      return `<td>${val}</td>`;
+    }).join("");
+    return `<tr><td>${row.label}</td>${cells}</tr>`;
+  }).join("");
+
+  const ctx = document.getElementById("detailModalChart").getContext("2d");
+  if (detailChart) detailChart.destroy();
+  detailChart = new Chart(ctx, {
+    type: config.chartType || "bar",
     data: {
-      labels: months.map(m => m.label.slice(0, 3)),
-      datasets: [
-        { label: "Plan", data: months.map(m => m.plan), backgroundColor: "#a9c4e8", borderRadius: 3 },
-        { label: "Actual", data: months.map(m => m.actual), backgroundColor: "#3b6fae", borderRadius: 3 }
-      ]
+      labels: config.rows.map(r => r.label.slice(0, 3)),
+      datasets: config.datasets.map(d => ({
+        label: d.label,
+        data: config.rows.map(r => r[d.key]),
+        backgroundColor: d.color,
+        borderColor: d.color,
+        borderRadius: config.chartType === "line" ? undefined : 3,
+        tension: config.chartType === "line" ? 0.3 : undefined
+      }))
     },
     options: {
       responsive: true,
@@ -184,13 +218,49 @@ function openLeaveDetail(periodId) {
       plugins: { legend: { labels: { font: { size: 11.5 } } } },
       scales: {
         x: { grid: { display: false } },
-        y: { beginAtZero: true, title: { display: true, text: "EL days" } }
+        y: { beginAtZero: true }
       }
     }
   });
 
-  leaveDetailModal.style.display = "flex";
+  detailModal.style.display = "flex";
 }
+
+// ── Leave Consumption detail ────────────────────────────────
+const leavePanel = document.getElementById("leavePanel");
+leavePanel.addEventListener("click", () => {
+  const { year, rows } = buildMonthRows(periodSelect.value, ["monthElPlan", "monthElActual"]);
+  rows.forEach(r => { r.pct = r.monthElPlan > 0 ? Math.round((r.monthElActual / r.monthElPlan) * 1000) / 10 : 0; });
+  const siteName = sites.find(s => s.id === currentSiteId)?.name || "";
+  openDetailModal({
+    title: `Leave Consumption — ${siteName}${year ? " " + year : ""}`,
+    rows,
+    columns: [
+      { key: "monthElPlan", label: "Plan" },
+      { key: "monthElActual", label: "Actual" },
+      { key: "pct", label: "%", format: r => r.pct + "%" }
+    ],
+    datasets: [
+      { key: "monthElPlan", label: "Plan", color: "#a9c4e8" },
+      { key: "monthElActual", label: "Actual", color: "#3b6fae" }
+    ],
+    chartType: "bar"
+  });
+});
+
+// ── Total Manpower detail ───────────────────────────────────
+const manpowerPanel = document.getElementById("manpowerPanel");
+manpowerPanel.addEventListener("click", () => {
+  const { year, rows } = buildMonthRows(periodSelect.value, ["closingManpower"]);
+  const siteName = sites.find(s => s.id === currentSiteId)?.name || "";
+  openDetailModal({
+    title: `Total Manpower — ${siteName}${year ? " " + year : ""}`,
+    rows,
+    columns: [{ key: "closingManpower", label: "Closing Manpower" }],
+    datasets: [{ key: "closingManpower", label: "Closing Manpower", color: "#2fb85c" }],
+    chartType: "line"
+  });
+});
 
 function syncUrl(siteId, periodId) {
   const params = new URLSearchParams();

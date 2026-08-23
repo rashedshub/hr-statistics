@@ -32,6 +32,11 @@ const leaveTotalPlanDisplay = document.getElementById("leaveTotalPlanDisplay");
 const leaveMonthTableBody = document.querySelector("#leaveMonthTable tbody");
 const saveLeaveYearBtn = document.getElementById("saveLeaveYearBtn");
 
+const manpowerSite = document.getElementById("manpowerSite");
+const manpowerYear = document.getElementById("manpowerYear");
+const manpowerMonthTableBody = document.querySelector("#manpowerMonthTable tbody");
+const saveManpowerYearBtn = document.getElementById("saveManpowerYearBtn");
+
 const formSite = document.getElementById("formSite");
 const formMonth = document.getElementById("formMonth");
 const formYear = document.getElementById("formYear");
@@ -66,12 +71,20 @@ formYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).join("
 formYear.value = CURRENT_YEAR;
 formMonth.innerHTML = MONTHS.map(m => `<option value="${m.num}">${m.name}</option>`).join("");
 formMonth.value = CURRENT_MONTH;
+manpowerYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).join("");
+manpowerYear.value = CURRENT_YEAR;
 
 leaveMonthTableBody.innerHTML = MONTHS.map(m => `
   <tr>
     <td>${m.name}</td>
     <td><input type="number" step="any" id="leaveMonthPlan_${m.num}"></td>
     <td><input type="number" step="any" id="leaveMonthActual_${m.num}"></td>
+  </tr>`).join("");
+
+manpowerMonthTableBody.innerHTML = MONTHS.map(m => `
+  <tr>
+    <td>${m.name}</td>
+    <td><input type="number" step="any" id="manpowerClosing_${m.num}"></td>
   </tr>`).join("");
 
 // Recalculate the Total EL (Plan) display live as any month's Plan changes.
@@ -100,6 +113,7 @@ async function refreshSites() {
 
   const options = sitesCache.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
   leaveSite.innerHTML = options;
+  manpowerSite.innerHTML = options;
   formSite.innerHTML = options;
   reportsSiteFilter.innerHTML = options;
 
@@ -110,6 +124,7 @@ async function refreshSites() {
   if (sitesCache.length) {
     await fetchSiteReports(leaveSite.value);
     loadLeaveYearTable();
+    loadManpowerYearTable();
     await refreshReportsList();
   }
 }
@@ -194,6 +209,53 @@ saveLeaveYearBtn.addEventListener("click", async () => {
     showToast("Save failed — check console / security rules");
   } finally {
     saveLeaveYearBtn.disabled = false;
+  }
+});
+
+// ── Total Manpower — yearly table ──────────────────────────
+manpowerSite.addEventListener("change", async () => {
+  await fetchSiteReports(manpowerSite.value);
+  loadManpowerYearTable();
+});
+manpowerYear.addEventListener("change", loadManpowerYearTable);
+
+function loadManpowerYearTable() {
+  const siteId = manpowerSite.value;
+  const year = manpowerYear.value;
+  const reports = reportsCache[siteId] || {};
+
+  for (const m of MONTHS) {
+    const rec = reports[periodIdFor(year, m.num)] || {};
+    document.getElementById(`manpowerClosing_${m.num}`).value = rec.closingManpower || "";
+  }
+}
+
+saveManpowerYearBtn.addEventListener("click", async () => {
+  const siteId = manpowerSite.value;
+  if (!siteId) { showToast("Add a plant first"); return; }
+  const year = manpowerYear.value;
+
+  saveManpowerYearBtn.disabled = true;
+  try {
+    await Promise.all(MONTHS.map(m => {
+      const closingVal = Number(document.getElementById(`manpowerClosing_${m.num}`).value) || 0;
+      return setDoc(
+        doc(db, "sites", siteId, "reports", periodIdFor(year, m.num)),
+        {
+          period: periodLabelFor(year, m.name),
+          closingManpower: closingVal
+        },
+        { merge: true }
+      );
+    }));
+    showToast(`Saved Total Manpower for ${year}`);
+    await fetchSiteReports(siteId);
+    await refreshReportsList();
+  } catch (err) {
+    console.error(err);
+    showToast("Save failed — check console / security rules");
+  } finally {
+    saveManpowerYearBtn.disabled = false;
   }
 });
 
@@ -306,6 +368,7 @@ async function deleteReport(siteId, periodId) {
   await fetchSiteReports(siteId);
   await refreshReportsList();
   if (siteId === leaveSite.value) loadLeaveYearTable();
+  if (siteId === manpowerSite.value) loadManpowerYearTable();
 }
 
 // ── Utils ─────────────────────────────────────────────────
