@@ -1,17 +1,11 @@
-import { firebaseConfig } from "./firebase-config.js";
-import { DEPARTMENTS, LETTER_TYPES } from "./schema.js";
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import {
-  getFirestore, collection, getDocs, query, orderBy
-} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+import { DEPARTMENTS } from "./schema.js";
+import { periodYear, pickDefaultPeriod, escapeHtml, loadSitesList, fetchSiteReportsMap } from "./dashboard-shared.js";
 
 const siteSelect = document.getElementById("siteSelect");
 const periodSelect = document.getElementById("periodSelect");
 const stateMsg = document.getElementById("stateMsg");
 const topicsWrap = document.getElementById("topicsWrap");
+const disciplinaryLink = document.getElementById("disciplinaryLink");
 
 let sites = [];
 let currentSiteId = null;
@@ -29,8 +23,7 @@ function setState(msg) {
 }
 
 async function loadSites() {
-  const snap = await getDocs(query(collection(db, "sites"), orderBy("name")));
-  sites = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  sites = await loadSitesList();
 
   if (sites.length === 0) {
     setState("No plants yet. Go to Admin to add your first plant and monthly report.");
@@ -46,28 +39,9 @@ async function loadSites() {
   await loadReportsForSite(currentSiteId, params.get("period"));
 }
 
-function currentPeriodId() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
-// Always prefer the real current month; if no data has been entered for it yet,
-// fall back to the most recent month at or before now that does have data;
-// only if nothing qualifies do we fall back to whatever's newest overall.
-function pickDefaultPeriod(periods, wantedFromUrl) {
-  if (wantedFromUrl && periods.includes(wantedFromUrl)) return wantedFromUrl;
-  const nowId = currentPeriodId();
-  if (periods.includes(nowId)) return nowId;
-  const upToNow = periods.filter(p => p <= nowId).sort();
-  if (upToNow.length) return upToNow[upToNow.length - 1];
-  return periods[0];
-}
-
 async function loadReportsForSite(siteId, wantedPeriod) {
   setState("Loading…");
-  const snap = await getDocs(collection(db, "sites", siteId, "reports"));
-  reportsById = {};
-  snap.docs.forEach(d => { reportsById[d.id] = d.data(); });
+  reportsById = await fetchSiteReportsMap(siteId);
 
   const periods = Object.keys(reportsById).sort((a, b) => b.localeCompare(a));
 
@@ -85,11 +59,6 @@ async function loadReportsForSite(siteId, wantedPeriod) {
 
   render(siteId, chosenPeriod);
   setState(null);
-}
-
-function periodYear(periodId) {
-  const m = /^(\d{4})-(\d{2})$/.exec(periodId);
-  return m ? m[1] : null;
 }
 
 // Sum a numeric field across every period in the same calendar year as
@@ -168,7 +137,7 @@ function render(siteId, periodId) {
   document.getElementById("feedbackYtdTotal").textContent = ytdFeedbackTotal.toLocaleString();
   document.getElementById("feedbackBigNum").textContent = feedbackTotal.toLocaleString();
 
-  // ── Disciplinary Action (card summary — detail is in the modal) ─
+  // ── Disciplinary Action — lightweight summary + link to its own page ─
   const deptData = current.disciplinaryDept || {};
   let grandActions = 0, grandEmployees = 0;
   DEPARTMENTS.forEach(d => {
@@ -177,18 +146,10 @@ function render(siteId, periodId) {
     grandEmployees += Number(v.employees) || 0;
   });
   const grandPct = grandEmployees > 0 ? Math.round((grandActions / grandEmployees) * 1000) / 10 : 0;
-  const prod = deptData["production"] || {};
-  const prodActions = Number(prod.actions) || 0;
-  const prodEmployees = Number(prod.employees) || 0;
-  const prodPct = prodEmployees > 0 ? Math.round((prodActions / prodEmployees) * 1000) / 10 : 0;
 
   document.getElementById("discGrandActions").textContent = grandActions.toLocaleString();
   document.getElementById("discGrandPct").textContent = `${grandPct}%`;
-  document.getElementById("discGrandEmployees").textContent = grandEmployees.toLocaleString();
-  document.getElementById("discProductionActions").textContent = prodActions.toLocaleString();
-  document.getElementById("discProductionPct").textContent = `${prodPct}%`;
-
-  drawDisciplinaryCharts(deptData, current.disciplinaryLetter || {});
+  disciplinaryLink.href = `disciplinary.html?site=${encodeURIComponent(siteId)}&period=${encodeURIComponent(periodId)}`;
 
   syncUrl(siteId, periodId);
 }
@@ -346,125 +307,11 @@ feedbackPanel.addEventListener("click", () => {
   });
 });
 
-// ── Disciplinary Action charts (inline, always visible — YTD figures) ──
-Chart.register(ChartDataLabels);
-let discCharts = {};
-
-const DEPT_COLORS = ["#2A56C6", "#0F9E90", "#DB9A2C", "#7C5CFC", "#2E8FA3", "#D8514F", "#1FA971"];
-const TYPE_COLORS = ["#D8514F", "#DB9A2C", "#7C5CFC", "#2E8FA3", "#2A56C6", "#0F9E90", "#93A1B5"];
-
-function destroyDiscChart(key) {
-  if (discCharts[key]) { discCharts[key].destroy(); delete discCharts[key]; }
-}
-
-function drawDisciplinaryCharts(deptData, letterData) {
-  const deptLabels = DEPARTMENTS.map(d => d.name);
-  const deptActions = DEPARTMENTS.map(d => Number((deptData[d.key] || {}).actions) || 0);
-  const deptRates = DEPARTMENTS.map(d => {
-    const v = deptData[d.key] || {};
-    const actions = Number(v.actions) || 0, emp = Number(v.employees) || 0;
-    return emp > 0 ? Math.round((actions / emp) * 1000) / 10 : 0;
-  });
-
-  destroyDiscChart("dept");
-  discCharts.dept = new Chart(document.getElementById("discDeptPieChart").getContext("2d"), {
-    type: "pie",
-    data: { labels: deptLabels, datasets: [{ data: deptActions, backgroundColor: DEPT_COLORS }] },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { position: "right", labels: { font: { size: 10.5 }, boxWidth: 11 } },
-        datalabels: {
-          color: "#fff", font: { weight: 700, size: 10.5 },
-          formatter: v => v > 0 ? v : ""
-        }
-      }
-    }
-  });
-
-  destroyDiscChart("rate");
-  discCharts.rate = new Chart(document.getElementById("discDeptRateBarChart").getContext("2d"), {
-    type: "bar",
-    data: { labels: deptLabels, datasets: [{ label: "% receiving action", data: deptRates, backgroundColor: "#2A56C6", borderRadius: 4 }] },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        datalabels: {
-          anchor: "end", align: "top", color: "#16233A", font: { weight: 700, size: 10.5 },
-          formatter: v => v > 0 ? v + "%" : ""
-        }
-      },
-      layout: { padding: { top: 16 } },
-      scales: {
-        y: { beginAtZero: true, ticks: { callback: v => v + "%" } },
-        x: { ticks: { font: { size: 9.5 } } }
-      }
-    }
-  });
-
-  const letterLabels = LETTER_TYPES.map(t => t.name);
-  const nonWorkerCounts = LETTER_TYPES.map(t => Number((letterData[t.key] || {}).nonWorker) || 0);
-  const workerCounts = LETTER_TYPES.map(t => Number((letterData[t.key] || {}).worker) || 0);
-  const pieLabelPlugin = { color: "#fff", font: { weight: 700, size: 9.5 }, formatter: v => v > 0 ? v : "" };
-
-  destroyDiscChart("typeNonWorker");
-  discCharts.typeNonWorker = new Chart(document.getElementById("discTypeNonWorkerPieChart").getContext("2d"), {
-    type: "pie",
-    data: { labels: letterLabels, datasets: [{ data: nonWorkerCounts, backgroundColor: TYPE_COLORS }] },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, datalabels: pieLabelPlugin }
-    }
-  });
-
-  destroyDiscChart("typeWorker");
-  discCharts.typeWorker = new Chart(document.getElementById("discTypeWorkerPieChart").getContext("2d"), {
-    type: "pie",
-    data: { labels: letterLabels, datasets: [{ data: workerCounts, backgroundColor: TYPE_COLORS }] },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { position: "bottom", labels: { font: { size: 9 }, boxWidth: 9 } },
-        datalabels: pieLabelPlugin
-      }
-    }
-  });
-
-  const totalNonWorker = nonWorkerCounts.reduce((a, b) => a + b, 0);
-  const totalWorker = workerCounts.reduce((a, b) => a + b, 0);
-  const totalBoth = totalNonWorker + totalWorker;
-  const nonWorkerShare = totalBoth > 0 ? Math.round((totalNonWorker / totalBoth) * 1000) / 10 : 0;
-  const workerShare = totalBoth > 0 ? Math.round((totalWorker / totalBoth) * 1000) / 10 : 0;
-
-  destroyDiscChart("workerVsNonWorker");
-  discCharts.workerVsNonWorker = new Chart(document.getElementById("discWorkerVsNonWorkerBarChart").getContext("2d"), {
-    type: "bar",
-    data: { labels: ["Non-Worker", "Worker"], datasets: [{ data: [nonWorkerShare, workerShare], backgroundColor: ["#93A1B5", "#2A56C6"], borderRadius: 4 }] },
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        datalabels: {
-          anchor: "end", align: "top", color: "#16233A", font: { weight: 700, size: 11 },
-          formatter: v => v > 0 ? v + "%" : ""
-        }
-      },
-      layout: { padding: { top: 16 } },
-      scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + "%" } } }
-    }
-  });
-}
-
 function syncUrl(siteId, periodId) {
   const params = new URLSearchParams();
   params.set("site", siteId);
   params.set("period", periodId);
   history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
-}
-
-function escapeHtml(s) {
-  return String(s ?? "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m]));
 }
 
 siteSelect.addEventListener("change", async () => {

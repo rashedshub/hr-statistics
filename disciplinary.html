@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Disciplinary Action — HR Statistics Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+</head>
+<body>
+
+<div class="hs-topbar">
+  <h1 class="hs-title"><a href="index.html" style="color:inherit;text-decoration:none;">HR Statistics</a></h1>
+
+  <div class="hs-topbar-item">
+    Period <select id="periodSelect"></select>
+  </div>
+
+  <div class="hs-topbar-item hs-topbar-right">
+    Plant <select id="siteSelect"></select>
+    <a class="hs-admin-link" href="index.html" title="Back to dashboard"><i data-lucide="arrow-left"></i></a>
+    <a class="hs-admin-link" href="admin.html" title="Admin"><i data-lucide="settings"></i></a>
+  </div>
+</div>
+
+<main class="disc-page">
+  <div id="stateMsg" class="state-msg">Loading…</div>
+
+  <div id="discPageWrap" style="display:none;">
+    <h2 class="disc-page-title">Disciplinary Action</h2>
+    <p class="disc-page-subtitle">Cumulative year-to-date figures as of the selected month.</p>
+
+    <div class="disc-summary-row">
+      <div class="disc-summary-stat"><span>Total actions (YTD)</span><b class="tabular" id="discGrandActions">–</b></div>
+      <div class="disc-summary-stat"><span>Overall %</span><b class="tabular" id="discGrandPct">–</b></div>
+      <div class="disc-summary-stat"><span>Total employees</span><b class="tabular" id="discGrandEmployees">–</b></div>
+      <div class="disc-summary-stat"><span>Production actions</span><b class="tabular" id="discProductionActions">–</b></div>
+      <div class="disc-summary-stat"><span>Production %</span><b class="tabular" id="discProductionPct">–</b></div>
+    </div>
+
+    <section class="disc-section">
+      <div class="disc-section-head">
+        <h2>Disciplinary actions received, by function</h2>
+        <span class="disc-section-num">1</span>
+      </div>
+      <div class="disc-big-chart"><canvas id="discDeptPieChart"></canvas></div>
+    </section>
+
+    <section class="disc-section">
+      <div class="disc-section-head">
+        <h2>% employees receiving disciplinary action, by function</h2>
+        <span class="disc-section-num">2</span>
+      </div>
+      <div class="disc-big-chart"><canvas id="discDeptRateBarChart"></canvas></div>
+    </section>
+
+    <section class="disc-section">
+      <div class="disc-section-head">
+        <h2>Disciplinary actions by type — Production only</h2>
+        <span class="disc-section-num">3</span>
+      </div>
+      <div class="disc-dual-big">
+        <div class="disc-dual-col">
+          <div class="disc-dual-caption">Non-Worker</div>
+          <div class="disc-big-chart disc-big-chart-sm"><canvas id="discTypeNonWorkerPieChart"></canvas></div>
+        </div>
+        <div class="disc-dual-col">
+          <div class="disc-dual-caption">Worker</div>
+          <div class="disc-big-chart disc-big-chart-sm"><canvas id="discTypeWorkerPieChart"></canvas></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="disc-section">
+      <div class="disc-section-head">
+        <h2>Worker vs Non-Worker share of disciplinary actions — Production</h2>
+        <span class="disc-section-num">4</span>
+      </div>
+      <div class="disc-big-chart"><canvas id="discWorkerVsNonWorkerBarChart"></canvas></div>
+    </section>
+  </div>
+</main>
+
+<script type="module" src="js/disciplinary.js"></script>
+<script>lucide.createIcons();</script>
+</body>
+</html>
