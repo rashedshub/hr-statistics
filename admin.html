@@ -128,9 +128,11 @@
   </div>
 
   <div class="admin-panel">
-    <h2 style="margin-top:0;">Disciplinary Action — monthly entry</h2>
+    <h2 style="margin-top:0;">Disciplinary Action — yearly entry (cumulative)</h2>
     <p class="hint" style="margin-top:-6px;margin-bottom:14px;">
-      Pick Plant, Month and Year, then fill in this one month's breakdown. Percentages and totals are calculated automatically.
+      Pick Plant, Month and Year, then enter this year's <b>cumulative totals as of that month</b> —
+      i.e. everything from January through the selected month, not just that month alone.
+      Percentages and totals are calculated automatically.
     </p>
     <div class="form-grid">
       <div class="field">
@@ -138,7 +140,7 @@
         <select id="disciplinarySite"></select>
       </div>
       <div class="field">
-        <label>Month</label>
+        <label>Data as of month</label>
         <select id="disciplinaryMonth"></select>
       </div>
       <div class="field">
@@ -147,10 +149,10 @@
       </div>
     </div>
 
-    <div class="form-group-title" style="margin-top:20px;">By department (function)</div>
+    <div class="form-group-title" style="margin-top:20px;">By department (function) — year to date</div>
     <table class="month-table" id="disciplinaryDeptTable">
       <thead>
-        <tr><th>Department</th><th># Disciplinary Action Received</th><th>Nos of Employee</th><th>% (auto)</th></tr>
+        <tr><th>Department</th><th># Disciplinary Action Received (YTD)</th><th>Nos of Employee</th><th>% (auto)</th></tr>
       </thead>
       <tbody><!-- 7 rows injected by admin.js --></tbody>
       <tfoot>
@@ -163,10 +165,10 @@
       </tfoot>
     </table>
 
-    <div class="form-group-title" style="margin-top:24px;">Production only — by letter type</div>
+    <div class="form-group-title" style="margin-top:24px;">Production only — by letter type — year to date</div>
     <table class="month-table" id="disciplinaryLetterTable">
       <thead>
-        <tr><th>Letter Type</th><th>Non Worker</th><th>Worker</th></tr>
+        <tr><th>Letter Type</th><th>Non Worker (YTD)</th><th>Worker (YTD)</th></tr>
       </thead>
       <tbody><!-- 7 rows injected by admin.js --></tbody>
       <tfoot>
@@ -180,7 +182,7 @@
     <p class="hint">Worker vs Non-Worker share of Production actions (calculated automatically): <b id="discWorkerShareHint">–</b></p>
 
     <div style="margin-top:16px;">
-      <button class="btn primary" id="saveDisciplinaryBtn"><i data-lucide="save"></i> Save Disciplinary Action for this month</button>
+      <button class="btn primary" id="saveDisciplinaryBtn"><i data-lucide="save"></i> Save Disciplinary Action (YTD as of this month)</button>
     </div>
   </div>
 

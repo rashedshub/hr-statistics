@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 </head>
 <body>
@@ -116,16 +117,15 @@
       </div>
     </div>
 
-    <!-- Disciplinary Action -->
-    <div class="stat-panel clickable-panel" id="disciplinaryPanel" tabindex="0" title="Click for charts">
+    <!-- Disciplinary Action — summary -->
+    <div class="stat-panel" id="disciplinaryPanel">
       <div class="stat-panel-header">
         <span class="card-icon-badge"><i data-lucide="scale"></i></span>
-        <span class="card-eyebrow">Disciplinary Action</span>
-        <span class="card-chevron"><i data-lucide="chevron-right"></i></span>
+        <span class="card-eyebrow">Disciplinary Action (YTD)</span>
       </div>
 
       <div class="hero-figure tabular" id="discGrandActions">–</div>
-      <div class="hero-label">Disciplinary actions received this month</div>
+      <div class="hero-label">Year to date, total disciplinary actions</div>
 
       <div class="stat-divider"></div>
 
@@ -135,6 +135,48 @@
         <div class="mini-stat"><span>Production actions</span><b class="tabular" id="discProductionActions">–</b></div>
         <div class="mini-stat"><span>Production %</span><b class="tabular" id="discProductionPct">–</b></div>
       </div>
+    </div>
+
+    <!-- Disciplinary Action — charts, inline alongside the cards -->
+    <div class="stat-panel" style="--accent:var(--cyan);">
+      <div class="stat-panel-header">
+        <span class="card-icon-badge"><i data-lucide="pie-chart"></i></span>
+        <span class="card-eyebrow">Actions by Function (YTD)</span>
+      </div>
+      <div class="chart-wrap" style="height:220px;margin-bottom:0;"><canvas id="discDeptPieChart"></canvas></div>
+    </div>
+
+    <div class="stat-panel" style="--accent:var(--cyan);">
+      <div class="stat-panel-header">
+        <span class="card-icon-badge"><i data-lucide="bar-chart-3"></i></span>
+        <span class="card-eyebrow">% Receiving Action, by Function (YTD)</span>
+      </div>
+      <div class="chart-wrap" style="height:220px;margin-bottom:0;"><canvas id="discDeptRateBarChart"></canvas></div>
+    </div>
+
+    <div class="stat-panel" style="--accent:var(--cyan);">
+      <div class="stat-panel-header">
+        <span class="card-icon-badge"><i data-lucide="list-tree"></i></span>
+        <span class="card-eyebrow">By Type — Production (YTD)</span>
+      </div>
+      <div class="disc-dual-pies">
+        <div class="disc-pie-col">
+          <div class="chart-wrap chart-wrap-sm"><canvas id="discTypeNonWorkerPieChart"></canvas></div>
+          <div class="disc-pie-caption">Non-Worker</div>
+        </div>
+        <div class="disc-pie-col">
+          <div class="chart-wrap chart-wrap-sm"><canvas id="discTypeWorkerPieChart"></canvas></div>
+          <div class="disc-pie-caption">Worker</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-panel" style="--accent:var(--cyan);">
+      <div class="stat-panel-header">
+        <span class="card-icon-badge"><i data-lucide="percent"></i></span>
+        <span class="card-eyebrow">Worker vs Non-Worker Share (Production, YTD)</span>
+      </div>
+      <div class="chart-wrap" style="height:220px;margin-bottom:0;"><canvas id="discWorkerVsNonWorkerBarChart"></canvas></div>
     </div>
 
   </div>
@@ -152,48 +194,6 @@
           <thead id="detailModalTableHead"></thead>
           <tbody id="detailModalTableBody"></tbody>
         </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- Disciplinary Action detail modal -->
-  <div id="disciplinaryModal" class="modal-overlay" style="display:none;">
-    <div class="modal-box" style="max-width:940px;">
-      <div class="modal-header">
-        <h3 id="disciplinaryModalTitle">Disciplinary Action — detail</h3>
-        <button class="modal-close" id="disciplinaryModalClose">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div id="disciplinaryEmptyMsg" class="state-msg" style="display:none;padding:30px 10px;">
-          No disciplinary data entered for this period yet.
-        </div>
-        <div id="disciplinaryChartsWrap" class="disc-charts-grid">
-          <div class="disc-chart-block">
-            <div class="disc-chart-title">1 · # Disciplinary action received by function</div>
-            <div class="chart-wrap"><canvas id="discDeptPieChart"></canvas></div>
-          </div>
-          <div class="disc-chart-block">
-            <div class="disc-chart-title">2 · % employees receiving disciplinary action, by function</div>
-            <div class="chart-wrap"><canvas id="discDeptRateBarChart"></canvas></div>
-          </div>
-          <div class="disc-chart-block disc-chart-block-wide">
-            <div class="disc-chart-title">3 · Disciplinary actions by type (Production) — Worker vs Non-Worker</div>
-            <div class="disc-dual-pies">
-              <div class="disc-pie-col">
-                <div class="chart-wrap chart-wrap-sm"><canvas id="discTypeNonWorkerPieChart"></canvas></div>
-                <div class="disc-pie-caption">Non-Worker</div>
-              </div>
-              <div class="disc-pie-col">
-                <div class="chart-wrap chart-wrap-sm"><canvas id="discTypeWorkerPieChart"></canvas></div>
-                <div class="disc-pie-caption">Worker</div>
-              </div>
-            </div>
-          </div>
-          <div class="disc-chart-block">
-            <div class="disc-chart-title">4 · Worker vs Non-Worker share of disciplinary actions (Production)</div>
-            <div class="chart-wrap"><canvas id="discWorkerVsNonWorkerBarChart"></canvas></div>
-          </div>
-        </div>
       </div>
     </div>
   </div>

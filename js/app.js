@@ -188,6 +188,8 @@ function render(siteId, periodId) {
   document.getElementById("discProductionActions").textContent = prodActions.toLocaleString();
   document.getElementById("discProductionPct").textContent = `${prodPct}%`;
 
+  drawDisciplinaryCharts(deptData, current.disciplinaryLetter || {});
+
   syncUrl(siteId, periodId);
 }
 
@@ -210,9 +212,7 @@ let detailChart = null;
 detailModalClose.addEventListener("click", closeDetailModal);
 detailModal.addEventListener("click", (e) => { if (e.target === detailModal) closeDetailModal(); });
 document.addEventListener("keydown", (e) => {
-  if (e.key !== "Escape") return;
-  closeDetailModal();
-  closeDisciplinaryModal();
+  if (e.key === "Escape") closeDetailModal();
 });
 
 function closeDetailModal() {
@@ -271,7 +271,7 @@ function openDetailModal(config) {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { labels: { font: { size: 11.5 } } } },
+      plugins: { legend: { labels: { font: { size: 11.5 } } }, datalabels: { display: false } },
       scales: {
         x: { grid: { display: false } },
         y: { beginAtZero: true }
@@ -346,51 +346,15 @@ feedbackPanel.addEventListener("click", () => {
   });
 });
 
-// ── Disciplinary Action detail (pie/bar charts, not month-series) ──
-const disciplinaryPanel = document.getElementById("disciplinaryPanel");
-const disciplinaryModal = document.getElementById("disciplinaryModal");
-const disciplinaryModalClose = document.getElementById("disciplinaryModalClose");
-const disciplinaryEmptyMsg = document.getElementById("disciplinaryEmptyMsg");
-const disciplinaryChartsWrap = document.getElementById("disciplinaryChartsWrap");
+// ── Disciplinary Action charts (inline, always visible — YTD figures) ──
+Chart.register(ChartDataLabels);
 let discCharts = {};
 
 const DEPT_COLORS = ["#2A56C6", "#0F9E90", "#DB9A2C", "#7C5CFC", "#2E8FA3", "#D8514F", "#1FA971"];
 const TYPE_COLORS = ["#D8514F", "#DB9A2C", "#7C5CFC", "#2E8FA3", "#2A56C6", "#0F9E90", "#93A1B5"];
 
-disciplinaryPanel.addEventListener("click", () => openDisciplinaryModal(periodSelect.value));
-disciplinaryModalClose.addEventListener("click", closeDisciplinaryModal);
-disciplinaryModal.addEventListener("click", (e) => { if (e.target === disciplinaryModal) closeDisciplinaryModal(); });
-
-function closeDisciplinaryModal() {
-  disciplinaryModal.style.display = "none";
-}
-
 function destroyDiscChart(key) {
   if (discCharts[key]) { discCharts[key].destroy(); delete discCharts[key]; }
-}
-
-function openDisciplinaryModal(periodId) {
-  const rec = reportsById[periodId] || {};
-  const deptData = rec.disciplinaryDept || {};
-  const letterData = rec.disciplinaryLetter || {};
-  const siteName = sites.find(s => s.id === currentSiteId)?.name || "";
-
-  document.getElementById("disciplinaryModalTitle").textContent =
-    `Disciplinary Action — ${siteName}${rec.period ? " " + rec.period : ""}`;
-
-  const hasDeptData = DEPARTMENTS.some(d => deptData[d.key] && ((deptData[d.key].actions || 0) || (deptData[d.key].employees || 0)));
-  const hasLetterData = LETTER_TYPES.some(t => letterData[t.key] && ((letterData[t.key].nonWorker || 0) || (letterData[t.key].worker || 0)));
-
-  if (!hasDeptData && !hasLetterData) {
-    disciplinaryEmptyMsg.style.display = "block";
-    disciplinaryChartsWrap.style.display = "none";
-  } else {
-    disciplinaryEmptyMsg.style.display = "none";
-    disciplinaryChartsWrap.style.display = "grid";
-    drawDisciplinaryCharts(deptData, letterData);
-  }
-
-  disciplinaryModal.style.display = "flex";
 }
 
 function drawDisciplinaryCharts(deptData, letterData) {
@@ -408,7 +372,13 @@ function drawDisciplinaryCharts(deptData, letterData) {
     data: { labels: deptLabels, datasets: [{ data: deptActions, backgroundColor: DEPT_COLORS }] },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: "right", labels: { font: { size: 10.5 }, boxWidth: 11 } } }
+      plugins: {
+        legend: { position: "right", labels: { font: { size: 10.5 }, boxWidth: 11 } },
+        datalabels: {
+          color: "#fff", font: { weight: 700, size: 10.5 },
+          formatter: v => v > 0 ? v : ""
+        }
+      }
     }
   });
 
@@ -418,7 +388,14 @@ function drawDisciplinaryCharts(deptData, letterData) {
     data: { labels: deptLabels, datasets: [{ label: "% receiving action", data: deptRates, backgroundColor: "#2A56C6", borderRadius: 4 }] },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: {
+        legend: { display: false },
+        datalabels: {
+          anchor: "end", align: "top", color: "#16233A", font: { weight: 700, size: 10.5 },
+          formatter: v => v > 0 ? v + "%" : ""
+        }
+      },
+      layout: { padding: { top: 16 } },
       scales: {
         y: { beginAtZero: true, ticks: { callback: v => v + "%" } },
         x: { ticks: { font: { size: 9.5 } } }
@@ -429,12 +406,16 @@ function drawDisciplinaryCharts(deptData, letterData) {
   const letterLabels = LETTER_TYPES.map(t => t.name);
   const nonWorkerCounts = LETTER_TYPES.map(t => Number((letterData[t.key] || {}).nonWorker) || 0);
   const workerCounts = LETTER_TYPES.map(t => Number((letterData[t.key] || {}).worker) || 0);
+  const pieLabelPlugin = { color: "#fff", font: { weight: 700, size: 9.5 }, formatter: v => v > 0 ? v : "" };
 
   destroyDiscChart("typeNonWorker");
   discCharts.typeNonWorker = new Chart(document.getElementById("discTypeNonWorkerPieChart").getContext("2d"), {
     type: "pie",
     data: { labels: letterLabels, datasets: [{ data: nonWorkerCounts, backgroundColor: TYPE_COLORS }] },
-    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, datalabels: pieLabelPlugin }
+    }
   });
 
   destroyDiscChart("typeWorker");
@@ -443,7 +424,10 @@ function drawDisciplinaryCharts(deptData, letterData) {
     data: { labels: letterLabels, datasets: [{ data: workerCounts, backgroundColor: TYPE_COLORS }] },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { position: "bottom", labels: { font: { size: 9 }, boxWidth: 9 } } }
+      plugins: {
+        legend: { position: "bottom", labels: { font: { size: 9 }, boxWidth: 9 } },
+        datalabels: pieLabelPlugin
+      }
     }
   });
 
@@ -459,7 +443,14 @@ function drawDisciplinaryCharts(deptData, letterData) {
     data: { labels: ["Non-Worker", "Worker"], datasets: [{ data: [nonWorkerShare, workerShare], backgroundColor: ["#93A1B5", "#2A56C6"], borderRadius: 4 }] },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
+      plugins: {
+        legend: { display: false },
+        datalabels: {
+          anchor: "end", align: "top", color: "#16233A", font: { weight: 700, size: 11 },
+          formatter: v => v > 0 ? v + "%" : ""
+        }
+      },
+      layout: { padding: { top: 16 } },
       scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + "%" } } }
     }
   });
