@@ -1,5 +1,5 @@
 import { firebaseConfig } from "./firebase-config.js";
-import { enabledTopics, MONTHS, periodIdFor, periodLabelFor } from "./schema.js";
+import { enabledTopics, MONTHS, DEPARTMENTS, LETTER_TYPES, periodIdFor, periodLabelFor } from "./schema.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, onAuthStateChanged, signOut
@@ -42,6 +42,13 @@ const feedbackYear = document.getElementById("feedbackYear");
 const feedbackMonthTableBody = document.querySelector("#feedbackMonthTable tbody");
 const saveFeedbackYearBtn = document.getElementById("saveFeedbackYearBtn");
 
+const disciplinarySite = document.getElementById("disciplinarySite");
+const disciplinaryMonth = document.getElementById("disciplinaryMonth");
+const disciplinaryYear = document.getElementById("disciplinaryYear");
+const discDeptTableBody = document.querySelector("#disciplinaryDeptTable tbody");
+const discLetterTableBody = document.querySelector("#disciplinaryLetterTable tbody");
+const saveDisciplinaryBtn = document.getElementById("saveDisciplinaryBtn");
+
 const formSite = document.getElementById("formSite");
 const formMonth = document.getElementById("formMonth");
 const formYear = document.getElementById("formYear");
@@ -80,6 +87,10 @@ manpowerYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).jo
 manpowerYear.value = CURRENT_YEAR;
 feedbackYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).join("");
 feedbackYear.value = CURRENT_YEAR;
+disciplinaryYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).join("");
+disciplinaryYear.value = CURRENT_YEAR;
+disciplinaryMonth.innerHTML = MONTHS.map(m => `<option value="${m.num}">${m.name}</option>`).join("");
+disciplinaryMonth.value = CURRENT_MONTH;
 
 leaveMonthTableBody.innerHTML = MONTHS.map(m => `
   <tr>
@@ -132,6 +143,69 @@ function updateFeedbackRowTotal(num) {
   return total;
 }
 
+// ── Disciplinary Action — department table ─────────────────
+discDeptTableBody.innerHTML = DEPARTMENTS.map(d => `
+  <tr>
+    <td>${d.name}</td>
+    <td><input type="number" step="any" id="discDeptActions_${d.key}"></td>
+    <td><input type="number" step="any" id="discDeptEmployees_${d.key}"></td>
+    <td><span class="row-total" id="discDeptPct_${d.key}">0%</span></td>
+  </tr>`).join("");
+
+DEPARTMENTS.forEach(d => {
+  const recalc = () => { updateDeptRowPct(d.key); updateDeptTotals(); };
+  document.getElementById(`discDeptActions_${d.key}`).addEventListener("input", recalc);
+  document.getElementById(`discDeptEmployees_${d.key}`).addEventListener("input", recalc);
+});
+
+function updateDeptRowPct(key) {
+  const actions = Number(document.getElementById(`discDeptActions_${key}`).value) || 0;
+  const employees = Number(document.getElementById(`discDeptEmployees_${key}`).value) || 0;
+  const pct = employees > 0 ? Math.round((actions / employees) * 1000) / 10 : 0;
+  document.getElementById(`discDeptPct_${key}`).textContent = `${pct}%`;
+}
+
+function updateDeptTotals() {
+  let totalActions = 0, totalEmployees = 0;
+  DEPARTMENTS.forEach(d => {
+    totalActions += Number(document.getElementById(`discDeptActions_${d.key}`).value) || 0;
+    totalEmployees += Number(document.getElementById(`discDeptEmployees_${d.key}`).value) || 0;
+  });
+  const totalPct = totalEmployees > 0 ? Math.round((totalActions / totalEmployees) * 1000) / 10 : 0;
+  document.getElementById("discDeptTotalActions").textContent = totalActions.toLocaleString();
+  document.getElementById("discDeptTotalEmployees").textContent = totalEmployees.toLocaleString();
+  document.getElementById("discDeptTotalPct").textContent = `${totalPct}%`;
+}
+
+// ── Disciplinary Action — letter-type table (Production only) ─
+discLetterTableBody.innerHTML = LETTER_TYPES.map(t => `
+  <tr>
+    <td>${t.name}</td>
+    <td><input type="number" step="any" id="discLetterNonWorker_${t.key}"></td>
+    <td><input type="number" step="any" id="discLetterWorker_${t.key}"></td>
+  </tr>`).join("");
+
+LETTER_TYPES.forEach(t => {
+  document.getElementById(`discLetterNonWorker_${t.key}`).addEventListener("input", updateLetterTotals);
+  document.getElementById(`discLetterWorker_${t.key}`).addEventListener("input", updateLetterTotals);
+});
+
+function updateLetterTotals() {
+  let totalNonWorker = 0, totalWorker = 0;
+  LETTER_TYPES.forEach(t => {
+    totalNonWorker += Number(document.getElementById(`discLetterNonWorker_${t.key}`).value) || 0;
+    totalWorker += Number(document.getElementById(`discLetterWorker_${t.key}`).value) || 0;
+  });
+  document.getElementById("discLetterTotalNonWorker").textContent = totalNonWorker.toLocaleString();
+  document.getElementById("discLetterTotalWorker").textContent = totalWorker.toLocaleString();
+
+  const grand = totalNonWorker + totalWorker;
+  const nonWorkerShare = grand > 0 ? Math.round((totalNonWorker / grand) * 1000) / 10 : 0;
+  const workerShare = grand > 0 ? Math.round((totalWorker / grand) * 1000) / 10 : 0;
+  document.getElementById("discWorkerShareHint").textContent =
+    grand > 0 ? `Non-Worker ${nonWorkerShare}% · Worker ${workerShare}%` : "–";
+}
+
 // Recalculate the Total EL (Plan) display live as any month's Plan changes.
 MONTHS.forEach(m => {
   document.getElementById(`leaveMonthPlan_${m.num}`).addEventListener("input", updateTotalPlanDisplay);
@@ -160,6 +234,7 @@ async function refreshSites() {
   leaveSite.innerHTML = options;
   manpowerSite.innerHTML = options;
   feedbackSite.innerHTML = options;
+  disciplinarySite.innerHTML = options;
   formSite.innerHTML = options;
   reportsSiteFilter.innerHTML = options;
 
@@ -172,6 +247,7 @@ async function refreshSites() {
     loadLeaveYearTable();
     loadManpowerYearTable();
     loadFeedbackYearTable();
+    loadDisciplinaryForm();
     await refreshReportsList();
   }
 }
@@ -363,6 +439,76 @@ saveFeedbackYearBtn.addEventListener("click", async () => {
   }
 });
 
+// ── Disciplinary Action — single-month load/save ────────────
+disciplinarySite.addEventListener("change", async () => {
+  await fetchSiteReports(disciplinarySite.value);
+  loadDisciplinaryForm();
+});
+disciplinaryMonth.addEventListener("change", loadDisciplinaryForm);
+disciplinaryYear.addEventListener("change", loadDisciplinaryForm);
+
+function loadDisciplinaryForm() {
+  const siteId = disciplinarySite.value;
+  const periodId = periodIdFor(disciplinaryYear.value, disciplinaryMonth.value);
+  const rec = (reportsCache[siteId] || {})[periodId] || {};
+  const deptData = rec.disciplinaryDept || {};
+  const letterData = rec.disciplinaryLetter || {};
+
+  DEPARTMENTS.forEach(d => {
+    const v = deptData[d.key] || {};
+    document.getElementById(`discDeptActions_${d.key}`).value = v.actions || "";
+    document.getElementById(`discDeptEmployees_${d.key}`).value = v.employees || "";
+    updateDeptRowPct(d.key);
+  });
+  updateDeptTotals();
+
+  LETTER_TYPES.forEach(t => {
+    const v = letterData[t.key] || {};
+    document.getElementById(`discLetterNonWorker_${t.key}`).value = v.nonWorker || "";
+    document.getElementById(`discLetterWorker_${t.key}`).value = v.worker || "";
+  });
+  updateLetterTotals();
+}
+
+saveDisciplinaryBtn.addEventListener("click", async () => {
+  const siteId = disciplinarySite.value;
+  if (!siteId) { showToast("Add a plant first"); return; }
+  const periodId = periodIdFor(disciplinaryYear.value, disciplinaryMonth.value);
+  const monthName = MONTHS.find(m => m.num === disciplinaryMonth.value)?.name || disciplinaryMonth.value;
+
+  const disciplinaryDept = {};
+  DEPARTMENTS.forEach(d => {
+    disciplinaryDept[d.key] = {
+      actions: Number(document.getElementById(`discDeptActions_${d.key}`).value) || 0,
+      employees: Number(document.getElementById(`discDeptEmployees_${d.key}`).value) || 0
+    };
+  });
+  const disciplinaryLetter = {};
+  LETTER_TYPES.forEach(t => {
+    disciplinaryLetter[t.key] = {
+      nonWorker: Number(document.getElementById(`discLetterNonWorker_${t.key}`).value) || 0,
+      worker: Number(document.getElementById(`discLetterWorker_${t.key}`).value) || 0
+    };
+  });
+
+  saveDisciplinaryBtn.disabled = true;
+  try {
+    await setDoc(
+      doc(db, "sites", siteId, "reports", periodId),
+      { period: periodLabelFor(disciplinaryYear.value, monthName), disciplinaryDept, disciplinaryLetter },
+      { merge: true }
+    );
+    showToast(`Saved Disciplinary Action for ${periodId}`);
+    await fetchSiteReports(siteId);
+    await refreshReportsList();
+  } catch (err) {
+    console.error(err);
+    showToast("Save failed — check console / security rules");
+  } finally {
+    saveDisciplinaryBtn.disabled = false;
+  }
+});
+
 // ── Generic monthly form (everything except Leave) ─────────
 function buildForm() {
   let html = "";
@@ -474,6 +620,7 @@ async function deleteReport(siteId, periodId) {
   if (siteId === leaveSite.value) loadLeaveYearTable();
   if (siteId === manpowerSite.value) loadManpowerYearTable();
   if (siteId === feedbackSite.value) loadFeedbackYearTable();
+  if (siteId === disciplinarySite.value) loadDisciplinaryForm();
 }
 
 // ── Utils ─────────────────────────────────────────────────

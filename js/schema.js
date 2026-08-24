@@ -82,9 +82,42 @@ export const TOPICS = [
   { id: "unpaid", title: "Employees with unpaid wage", icon: "credit-card-off", enabled: false, fields: [] },
   { id: "zt", title: "ZT issues", icon: "ban", enabled: false, fields: [] },
   { id: "hours", title: "Workers with excessive working hours", icon: "clock", enabled: false, fields: [] },
-  { id: "oneonone", title: "Workers one-on-one interview", icon: "users-round", enabled: false, fields: [] },
-  { id: "disciplinary", title: "Outstanding Disciplinary", icon: "scale", enabled: false, fields: [] }
+  { id: "oneonone", title: "Workers one-on-one interview", icon: "users-round", enabled: false, fields: [] }
 ];
+
+// Fixed department (function) list for Disciplinary Action.
+export const DEPARTMENTS = [
+  { key: "accounting", name: "Accounting & Finance" },
+  { key: "administration", name: "Administration" },
+  { key: "commercial", name: "Commercial" },
+  { key: "hr", name: "HR" },
+  { key: "production", name: "Production" },
+  { key: "quality", name: "Quality" },
+  { key: "sales", name: "Sales" }
+];
+
+// Fixed disciplinary-letter-type list (Production only).
+export const LETTER_TYPES = [
+  { key: "dismissal", name: "Dismissal" },
+  { key: "finalWarning", name: "Final Warning" },
+  { key: "stoppageIncrement", name: "Stoppage of Increment" },
+  { key: "strongWarning", name: "Strong Warning" },
+  { key: "warningLetter", name: "Warning Letter" },
+  { key: "cautionary", name: "Cautionary" },
+  { key: "verbalWarning", name: "Verbal Warning" }
+];
+
+TOPICS.push({
+  id: "disciplinary",
+  title: "Disciplinary Action",
+  icon: "scale",
+  enabled: true,
+  customAdminUI: true, // one-month-at-a-time entry with two breakdown tables — built in admin.js
+  fields: [
+    { key: "disciplinaryDept", label: "By department: { actions, employees } per department", type: "map" },
+    { key: "disciplinaryLetter", label: "By letter type (Production only): { nonWorker, worker } per type", type: "map" }
+  ]
+});
 
 export function enabledTopics() {
   return TOPICS.filter(t => t.enabled);

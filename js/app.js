@@ -1,4 +1,5 @@
 import { firebaseConfig } from "./firebase-config.js";
+import { DEPARTMENTS, LETTER_TYPES } from "./schema.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getFirestore, collection, getDocs, query, orderBy
@@ -167,6 +168,26 @@ function render(siteId, periodId) {
   document.getElementById("feedbackYtdTotal").textContent = ytdFeedbackTotal.toLocaleString();
   document.getElementById("feedbackBigNum").textContent = feedbackTotal.toLocaleString();
 
+  // ── Disciplinary Action (card summary — detail is in the modal) ─
+  const deptData = current.disciplinaryDept || {};
+  let grandActions = 0, grandEmployees = 0;
+  DEPARTMENTS.forEach(d => {
+    const v = deptData[d.key] || {};
+    grandActions += Number(v.actions) || 0;
+    grandEmployees += Number(v.employees) || 0;
+  });
+  const grandPct = grandEmployees > 0 ? Math.round((grandActions / grandEmployees) * 1000) / 10 : 0;
+  const prod = deptData["production"] || {};
+  const prodActions = Number(prod.actions) || 0;
+  const prodEmployees = Number(prod.employees) || 0;
+  const prodPct = prodEmployees > 0 ? Math.round((prodActions / prodEmployees) * 1000) / 10 : 0;
+
+  document.getElementById("discGrandActions").textContent = grandActions.toLocaleString();
+  document.getElementById("discGrandPct").textContent = `${grandPct}%`;
+  document.getElementById("discGrandEmployees").textContent = grandEmployees.toLocaleString();
+  document.getElementById("discProductionActions").textContent = prodActions.toLocaleString();
+  document.getElementById("discProductionPct").textContent = `${prodPct}%`;
+
   syncUrl(siteId, periodId);
 }
 
@@ -188,7 +209,11 @@ let detailChart = null;
 
 detailModalClose.addEventListener("click", closeDetailModal);
 detailModal.addEventListener("click", (e) => { if (e.target === detailModal) closeDetailModal(); });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDetailModal(); });
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  closeDetailModal();
+  closeDisciplinaryModal();
+});
 
 function closeDetailModal() {
   detailModal.style.display = "none";
@@ -320,6 +345,125 @@ feedbackPanel.addEventListener("click", () => {
     chartType: "bar"
   });
 });
+
+// ── Disciplinary Action detail (pie/bar charts, not month-series) ──
+const disciplinaryPanel = document.getElementById("disciplinaryPanel");
+const disciplinaryModal = document.getElementById("disciplinaryModal");
+const disciplinaryModalClose = document.getElementById("disciplinaryModalClose");
+const disciplinaryEmptyMsg = document.getElementById("disciplinaryEmptyMsg");
+const disciplinaryChartsWrap = document.getElementById("disciplinaryChartsWrap");
+let discCharts = {};
+
+const DEPT_COLORS = ["#2A56C6", "#0F9E90", "#DB9A2C", "#7C5CFC", "#2E8FA3", "#D8514F", "#1FA971"];
+const TYPE_COLORS = ["#D8514F", "#DB9A2C", "#7C5CFC", "#2E8FA3", "#2A56C6", "#0F9E90", "#93A1B5"];
+
+disciplinaryPanel.addEventListener("click", () => openDisciplinaryModal(periodSelect.value));
+disciplinaryModalClose.addEventListener("click", closeDisciplinaryModal);
+disciplinaryModal.addEventListener("click", (e) => { if (e.target === disciplinaryModal) closeDisciplinaryModal(); });
+
+function closeDisciplinaryModal() {
+  disciplinaryModal.style.display = "none";
+}
+
+function destroyDiscChart(key) {
+  if (discCharts[key]) { discCharts[key].destroy(); delete discCharts[key]; }
+}
+
+function openDisciplinaryModal(periodId) {
+  const rec = reportsById[periodId] || {};
+  const deptData = rec.disciplinaryDept || {};
+  const letterData = rec.disciplinaryLetter || {};
+  const siteName = sites.find(s => s.id === currentSiteId)?.name || "";
+
+  document.getElementById("disciplinaryModalTitle").textContent =
+    `Disciplinary Action — ${siteName}${rec.period ? " " + rec.period : ""}`;
+
+  const hasDeptData = DEPARTMENTS.some(d => deptData[d.key] && ((deptData[d.key].actions || 0) || (deptData[d.key].employees || 0)));
+  const hasLetterData = LETTER_TYPES.some(t => letterData[t.key] && ((letterData[t.key].nonWorker || 0) || (letterData[t.key].worker || 0)));
+
+  if (!hasDeptData && !hasLetterData) {
+    disciplinaryEmptyMsg.style.display = "block";
+    disciplinaryChartsWrap.style.display = "none";
+  } else {
+    disciplinaryEmptyMsg.style.display = "none";
+    disciplinaryChartsWrap.style.display = "grid";
+    drawDisciplinaryCharts(deptData, letterData);
+  }
+
+  disciplinaryModal.style.display = "flex";
+}
+
+function drawDisciplinaryCharts(deptData, letterData) {
+  const deptLabels = DEPARTMENTS.map(d => d.name);
+  const deptActions = DEPARTMENTS.map(d => Number((deptData[d.key] || {}).actions) || 0);
+  const deptRates = DEPARTMENTS.map(d => {
+    const v = deptData[d.key] || {};
+    const actions = Number(v.actions) || 0, emp = Number(v.employees) || 0;
+    return emp > 0 ? Math.round((actions / emp) * 1000) / 10 : 0;
+  });
+
+  destroyDiscChart("dept");
+  discCharts.dept = new Chart(document.getElementById("discDeptPieChart").getContext("2d"), {
+    type: "pie",
+    data: { labels: deptLabels, datasets: [{ data: deptActions, backgroundColor: DEPT_COLORS }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: "right", labels: { font: { size: 10.5 }, boxWidth: 11 } } }
+    }
+  });
+
+  destroyDiscChart("rate");
+  discCharts.rate = new Chart(document.getElementById("discDeptRateBarChart").getContext("2d"), {
+    type: "bar",
+    data: { labels: deptLabels, datasets: [{ label: "% receiving action", data: deptRates, backgroundColor: "#2A56C6", borderRadius: 4 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, ticks: { callback: v => v + "%" } },
+        x: { ticks: { font: { size: 9.5 } } }
+      }
+    }
+  });
+
+  const letterLabels = LETTER_TYPES.map(t => t.name);
+  const nonWorkerCounts = LETTER_TYPES.map(t => Number((letterData[t.key] || {}).nonWorker) || 0);
+  const workerCounts = LETTER_TYPES.map(t => Number((letterData[t.key] || {}).worker) || 0);
+
+  destroyDiscChart("typeNonWorker");
+  discCharts.typeNonWorker = new Chart(document.getElementById("discTypeNonWorkerPieChart").getContext("2d"), {
+    type: "pie",
+    data: { labels: letterLabels, datasets: [{ data: nonWorkerCounts, backgroundColor: TYPE_COLORS }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+  });
+
+  destroyDiscChart("typeWorker");
+  discCharts.typeWorker = new Chart(document.getElementById("discTypeWorkerPieChart").getContext("2d"), {
+    type: "pie",
+    data: { labels: letterLabels, datasets: [{ data: workerCounts, backgroundColor: TYPE_COLORS }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: "bottom", labels: { font: { size: 9 }, boxWidth: 9 } } }
+    }
+  });
+
+  const totalNonWorker = nonWorkerCounts.reduce((a, b) => a + b, 0);
+  const totalWorker = workerCounts.reduce((a, b) => a + b, 0);
+  const totalBoth = totalNonWorker + totalWorker;
+  const nonWorkerShare = totalBoth > 0 ? Math.round((totalNonWorker / totalBoth) * 1000) / 10 : 0;
+  const workerShare = totalBoth > 0 ? Math.round((totalWorker / totalBoth) * 1000) / 10 : 0;
+
+  destroyDiscChart("workerVsNonWorker");
+  discCharts.workerVsNonWorker = new Chart(document.getElementById("discWorkerVsNonWorkerBarChart").getContext("2d"), {
+    type: "bar",
+    data: { labels: ["Non-Worker", "Worker"], datasets: [{ data: [nonWorkerShare, workerShare], backgroundColor: ["#93A1B5", "#2A56C6"], borderRadius: 4 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, max: 100, ticks: { callback: v => v + "%" } } }
+    }
+  });
+}
 
 function syncUrl(siteId, periodId) {
   const params = new URLSearchParams();
