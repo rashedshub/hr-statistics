@@ -100,6 +100,20 @@ function render(siteId, periodId) {
   document.getElementById("sickYtdDays").textContent = ytdSickDays.toLocaleString();
   document.getElementById("sickPct").textContent = `${sickPct}%`;
 
+  // ── Present % ────────────────────────────────────────────────
+  const presentTotalEmployees = Number(current.presentTotalEmployees) || 0;
+  const presentTotalPresent = Number(current.presentTotalPresent) || 0;
+  const presentSewingTotal = Number(current.presentSewingTotal) || 0;
+  const presentSewingPresent = Number(current.presentSewingPresent) || 0;
+  const presentOverallPct = presentTotalEmployees > 0 ? Math.round((presentTotalPresent / presentTotalEmployees) * 1000) / 10 : 0;
+  const presentSewingPct = presentSewingTotal > 0 ? Math.round((presentSewingPresent / presentSewingTotal) * 1000) / 10 : 0;
+
+  document.getElementById("presentOverallPct").textContent = `${presentOverallPct}%`;
+  document.getElementById("presentTotalEmployees").textContent = presentTotalEmployees.toLocaleString();
+  document.getElementById("presentTotalPresent").textContent = presentTotalPresent.toLocaleString();
+  document.getElementById("presentSewingPct").textContent = `${presentSewingPct}%`;
+  document.getElementById("presentSewingPresent").textContent = presentSewingPresent.toLocaleString();
+
   // ── Total Manpower ──────────────────────────────────────────
   const workerManpower = Number(current.workerManpower) || 0;
   const nonWorkerManpower = Number(current.nonWorkerManpower) || 0;

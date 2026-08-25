@@ -128,6 +128,42 @@
   </div>
 
   <div class="admin-panel">
+    <h2 style="margin-top:0;">Present % — yearly entry</h2>
+    <p class="hint" style="margin-top:-6px;margin-bottom:14px;">
+      Enter each month's headcount and present count — overall for everyone, plus a separate figure for Sewing (Operator) workers. Percentages are calculated automatically.
+    </p>
+    <div class="form-grid">
+      <div class="field">
+        <label>Plant</label>
+        <select id="presentSite"></select>
+      </div>
+      <div class="field">
+        <label>Year</label>
+        <select id="presentYear"></select>
+      </div>
+    </div>
+
+    <table class="month-table" id="presentMonthTable">
+      <thead>
+        <tr>
+          <th>Month</th>
+          <th>Total Employees</th>
+          <th>Total Present</th>
+          <th>Overall % (auto)</th>
+          <th>Sewing Headcount</th>
+          <th>Sewing Present</th>
+          <th>Sewing % (auto)</th>
+        </tr>
+      </thead>
+      <tbody><!-- 12 rows injected by admin.js --></tbody>
+    </table>
+
+    <div style="margin-top:16px;">
+      <button class="btn primary" id="savePresentYearBtn"><i data-lucide="save"></i> Save Present % (whole year)</button>
+    </div>
+  </div>
+
+  <div class="admin-panel">
     <h2 style="margin-top:0;">Disciplinary Action — yearly entry (cumulative)</h2>
     <p class="hint" style="margin-top:-6px;margin-bottom:14px;">
       Pick Plant, Month and Year, then enter this year's <b>cumulative totals as of that month</b> —

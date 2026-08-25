@@ -42,6 +42,11 @@ const feedbackYear = document.getElementById("feedbackYear");
 const feedbackMonthTableBody = document.querySelector("#feedbackMonthTable tbody");
 const saveFeedbackYearBtn = document.getElementById("saveFeedbackYearBtn");
 
+const presentSite = document.getElementById("presentSite");
+const presentYear = document.getElementById("presentYear");
+const presentMonthTableBody = document.querySelector("#presentMonthTable tbody");
+const savePresentYearBtn = document.getElementById("savePresentYearBtn");
+
 const disciplinarySite = document.getElementById("disciplinarySite");
 const disciplinaryMonth = document.getElementById("disciplinaryMonth");
 const disciplinaryYear = document.getElementById("disciplinaryYear");
@@ -87,6 +92,8 @@ manpowerYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).jo
 manpowerYear.value = CURRENT_YEAR;
 feedbackYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).join("");
 feedbackYear.value = CURRENT_YEAR;
+presentYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).join("");
+presentYear.value = CURRENT_YEAR;
 disciplinaryYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).join("");
 disciplinaryYear.value = CURRENT_YEAR;
 disciplinaryMonth.innerHTML = MONTHS.map(m => `<option value="${m.num}">${m.name}</option>`).join("");
@@ -141,6 +148,39 @@ function updateFeedbackRowTotal(num) {
   const total = external + internal;
   document.getElementById(`feedbackTotal_${num}`).textContent = total.toLocaleString();
   return total;
+}
+
+// ── Present % — yearly table ────────────────────────────────
+presentMonthTableBody.innerHTML = MONTHS.map(m => `
+  <tr>
+    <td>${m.name}</td>
+    <td><input type="number" step="any" id="presentTotalEmployees_${m.num}"></td>
+    <td><input type="number" step="any" id="presentTotalPresent_${m.num}"></td>
+    <td><span class="row-total" id="presentOverallPct_${m.num}">0%</span></td>
+    <td><input type="number" step="any" id="presentSewingTotal_${m.num}"></td>
+    <td><input type="number" step="any" id="presentSewingPresent_${m.num}"></td>
+    <td><span class="row-total" id="presentSewingPct_${m.num}">0%</span></td>
+  </tr>`).join("");
+
+MONTHS.forEach(m => {
+  const recalc = () => updatePresentRowPct(m.num);
+  document.getElementById(`presentTotalEmployees_${m.num}`).addEventListener("input", recalc);
+  document.getElementById(`presentTotalPresent_${m.num}`).addEventListener("input", recalc);
+  document.getElementById(`presentSewingTotal_${m.num}`).addEventListener("input", recalc);
+  document.getElementById(`presentSewingPresent_${m.num}`).addEventListener("input", recalc);
+});
+
+function updatePresentRowPct(num) {
+  const totalEmployees = Number(document.getElementById(`presentTotalEmployees_${num}`).value) || 0;
+  const totalPresent = Number(document.getElementById(`presentTotalPresent_${num}`).value) || 0;
+  const sewingTotal = Number(document.getElementById(`presentSewingTotal_${num}`).value) || 0;
+  const sewingPresent = Number(document.getElementById(`presentSewingPresent_${num}`).value) || 0;
+
+  const overallPct = totalEmployees > 0 ? Math.round((totalPresent / totalEmployees) * 1000) / 10 : 0;
+  const sewingPct = sewingTotal > 0 ? Math.round((sewingPresent / sewingTotal) * 1000) / 10 : 0;
+
+  document.getElementById(`presentOverallPct_${num}`).textContent = `${overallPct}%`;
+  document.getElementById(`presentSewingPct_${num}`).textContent = `${sewingPct}%`;
 }
 
 // ── Disciplinary Action — department table ─────────────────
@@ -234,6 +274,7 @@ async function refreshSites() {
   leaveSite.innerHTML = options;
   manpowerSite.innerHTML = options;
   feedbackSite.innerHTML = options;
+  presentSite.innerHTML = options;
   disciplinarySite.innerHTML = options;
   formSite.innerHTML = options;
   reportsSiteFilter.innerHTML = options;
@@ -247,6 +288,7 @@ async function refreshSites() {
     loadLeaveYearTable();
     loadManpowerYearTable();
     loadFeedbackYearTable();
+    loadPresentYearTable();
     loadDisciplinaryForm();
     await refreshReportsList();
   }
@@ -439,6 +481,63 @@ saveFeedbackYearBtn.addEventListener("click", async () => {
   }
 });
 
+// ── Present % — yearly load/save ────────────────────────────
+presentSite.addEventListener("change", async () => {
+  await fetchSiteReports(presentSite.value);
+  loadPresentYearTable();
+});
+presentYear.addEventListener("change", loadPresentYearTable);
+
+function loadPresentYearTable() {
+  const siteId = presentSite.value;
+  const year = presentYear.value;
+  const reports = reportsCache[siteId] || {};
+
+  for (const m of MONTHS) {
+    const rec = reports[periodIdFor(year, m.num)] || {};
+    document.getElementById(`presentTotalEmployees_${m.num}`).value = rec.presentTotalEmployees || "";
+    document.getElementById(`presentTotalPresent_${m.num}`).value = rec.presentTotalPresent || "";
+    document.getElementById(`presentSewingTotal_${m.num}`).value = rec.presentSewingTotal || "";
+    document.getElementById(`presentSewingPresent_${m.num}`).value = rec.presentSewingPresent || "";
+    updatePresentRowPct(m.num);
+  }
+}
+
+savePresentYearBtn.addEventListener("click", async () => {
+  const siteId = presentSite.value;
+  if (!siteId) { showToast("Add a plant first"); return; }
+  const year = presentYear.value;
+
+  savePresentYearBtn.disabled = true;
+  try {
+    await Promise.all(MONTHS.map(m => {
+      const totalEmployees = Number(document.getElementById(`presentTotalEmployees_${m.num}`).value) || 0;
+      const totalPresent = Number(document.getElementById(`presentTotalPresent_${m.num}`).value) || 0;
+      const sewingTotal = Number(document.getElementById(`presentSewingTotal_${m.num}`).value) || 0;
+      const sewingPresent = Number(document.getElementById(`presentSewingPresent_${m.num}`).value) || 0;
+      return setDoc(
+        doc(db, "sites", siteId, "reports", periodIdFor(year, m.num)),
+        {
+          period: periodLabelFor(year, m.name),
+          presentTotalEmployees: totalEmployees,
+          presentTotalPresent: totalPresent,
+          presentSewingTotal: sewingTotal,
+          presentSewingPresent: sewingPresent
+        },
+        { merge: true }
+      );
+    }));
+    showToast(`Saved Present % for ${year}`);
+    await fetchSiteReports(siteId);
+    await refreshReportsList();
+  } catch (err) {
+    console.error(err);
+    showToast("Save failed — check console / security rules");
+  } finally {
+    savePresentYearBtn.disabled = false;
+  }
+});
+
 // ── Disciplinary Action — single-month load/save ────────────
 disciplinarySite.addEventListener("change", async () => {
   await fetchSiteReports(disciplinarySite.value);
@@ -620,6 +719,7 @@ async function deleteReport(siteId, periodId) {
   if (siteId === leaveSite.value) loadLeaveYearTable();
   if (siteId === manpowerSite.value) loadManpowerYearTable();
   if (siteId === feedbackSite.value) loadFeedbackYearTable();
+  if (siteId === presentSite.value) loadPresentYearTable();
   if (siteId === disciplinarySite.value) loadDisciplinaryForm();
 }
 

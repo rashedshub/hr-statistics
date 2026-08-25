@@ -69,11 +69,23 @@ export const TOPICS = [
       { key: "feedbackTotal", label: "Total (derived: External + Internal)", type: "number" }
     ]
   },
+  {
+    id: "present",
+    title: "Present %",
+    icon: "user-round-check",
+    enabled: true,
+    customAdminUI: true, // has its own year-at-a-glance table in admin.js — skipped by the generic form
+    fields: [
+      { key: "presentTotalEmployees", label: "Total employees", type: "number" },
+      { key: "presentTotalPresent", label: "Present (total)", type: "number" },
+      { key: "presentSewingTotal", label: "Sewing worker headcount", type: "number" },
+      { key: "presentSewingPresent", label: "Sewing worker present", type: "number" }
+    ]
+  },
 
   // ── Not built yet — next topics to add, one at a time ──────
   { id: "directManpower", title: "Direct Manpower", icon: "user-check", enabled: false, fields: [] },
   { id: "manpowerShortage", title: "Manpower excess/(shortage)", icon: "shield-alert", enabled: false, fields: [] },
-  { id: "present", title: "Present", icon: "user-round-check", enabled: false, fields: [] },
   { id: "training", title: "Training", icon: "presentation", enabled: false, fields: [] },
   { id: "turnover", title: "Employee Turnover", icon: "refresh-cw", enabled: false, fields: [] },
   { id: "injuries", title: "Injuries", icon: "user-round-x", enabled: false, fields: [] },
