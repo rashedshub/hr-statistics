@@ -47,6 +47,11 @@ const presentYear = document.getElementById("presentYear");
 const presentMonthTableBody = document.querySelector("#presentMonthTable tbody");
 const savePresentYearBtn = document.getElementById("savePresentYearBtn");
 
+const injuriesSite = document.getElementById("injuriesSite");
+const injuriesYear = document.getElementById("injuriesYear");
+const injuriesMonthTableBody = document.querySelector("#injuriesMonthTable tbody");
+const saveInjuriesYearBtn = document.getElementById("saveInjuriesYearBtn");
+
 const disciplinarySite = document.getElementById("disciplinarySite");
 const disciplinaryMonth = document.getElementById("disciplinaryMonth");
 const disciplinaryYear = document.getElementById("disciplinaryYear");
@@ -94,6 +99,8 @@ feedbackYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).jo
 feedbackYear.value = CURRENT_YEAR;
 presentYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).join("");
 presentYear.value = CURRENT_YEAR;
+injuriesYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).join("");
+injuriesYear.value = CURRENT_YEAR;
 disciplinaryYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).join("");
 disciplinaryYear.value = CURRENT_YEAR;
 disciplinaryMonth.innerHTML = MONTHS.map(m => `<option value="${m.num}">${m.name}</option>`).join("");
@@ -182,6 +189,14 @@ function updatePresentRowPct(num) {
   document.getElementById(`presentOverallPct_${num}`).textContent = `${overallPct}%`;
   document.getElementById(`presentSewingPct_${num}`).textContent = `${sewingPct}%`;
 }
+
+// ── Injuries — yearly table ──────────────────────────────────
+injuriesMonthTableBody.innerHTML = MONTHS.map(m => `
+  <tr>
+    <td>${m.name}</td>
+    <td><input type="number" step="any" id="injuriesTotal_${m.num}"></td>
+    <td><input type="number" step="any" id="injuriesCritical_${m.num}"></td>
+  </tr>`).join("");
 
 // ── Disciplinary Action — department table ─────────────────
 discDeptTableBody.innerHTML = DEPARTMENTS.map(d => `
@@ -275,6 +290,7 @@ async function refreshSites() {
   manpowerSite.innerHTML = options;
   feedbackSite.innerHTML = options;
   presentSite.innerHTML = options;
+  injuriesSite.innerHTML = options;
   disciplinarySite.innerHTML = options;
   formSite.innerHTML = options;
   reportsSiteFilter.innerHTML = options;
@@ -289,6 +305,7 @@ async function refreshSites() {
     loadManpowerYearTable();
     loadFeedbackYearTable();
     loadPresentYearTable();
+    loadInjuriesYearTable();
     loadDisciplinaryForm();
     await refreshReportsList();
   }
@@ -538,6 +555,56 @@ savePresentYearBtn.addEventListener("click", async () => {
   }
 });
 
+// ── Injuries — yearly load/save ─────────────────────────────
+injuriesSite.addEventListener("change", async () => {
+  await fetchSiteReports(injuriesSite.value);
+  loadInjuriesYearTable();
+});
+injuriesYear.addEventListener("change", loadInjuriesYearTable);
+
+function loadInjuriesYearTable() {
+  const siteId = injuriesSite.value;
+  const year = injuriesYear.value;
+  const reports = reportsCache[siteId] || {};
+
+  for (const m of MONTHS) {
+    const rec = reports[periodIdFor(year, m.num)] || {};
+    document.getElementById(`injuriesTotal_${m.num}`).value = rec.injuriesTotal || "";
+    document.getElementById(`injuriesCritical_${m.num}`).value = rec.injuriesCritical || "";
+  }
+}
+
+saveInjuriesYearBtn.addEventListener("click", async () => {
+  const siteId = injuriesSite.value;
+  if (!siteId) { showToast("Add a plant first"); return; }
+  const year = injuriesYear.value;
+
+  saveInjuriesYearBtn.disabled = true;
+  try {
+    await Promise.all(MONTHS.map(m => {
+      const totalVal = Number(document.getElementById(`injuriesTotal_${m.num}`).value) || 0;
+      const criticalVal = Number(document.getElementById(`injuriesCritical_${m.num}`).value) || 0;
+      return setDoc(
+        doc(db, "sites", siteId, "reports", periodIdFor(year, m.num)),
+        {
+          period: periodLabelFor(year, m.name),
+          injuriesTotal: totalVal,
+          injuriesCritical: criticalVal
+        },
+        { merge: true }
+      );
+    }));
+    showToast(`Saved Injuries for ${year}`);
+    await fetchSiteReports(siteId);
+    await refreshReportsList();
+  } catch (err) {
+    console.error(err);
+    showToast("Save failed — check console / security rules");
+  } finally {
+    saveInjuriesYearBtn.disabled = false;
+  }
+});
+
 // ── Disciplinary Action — single-month load/save ────────────
 disciplinarySite.addEventListener("change", async () => {
   await fetchSiteReports(disciplinarySite.value);
@@ -720,6 +787,7 @@ async function deleteReport(siteId, periodId) {
   if (siteId === manpowerSite.value) loadManpowerYearTable();
   if (siteId === feedbackSite.value) loadFeedbackYearTable();
   if (siteId === presentSite.value) loadPresentYearTable();
+  if (siteId === injuriesSite.value) loadInjuriesYearTable();
   if (siteId === disciplinarySite.value) loadDisciplinaryForm();
 }
 

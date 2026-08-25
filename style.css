@@ -19,6 +19,7 @@
   --violet:#7C5CFC;     /* Employees Feedback Received accent */
   --cyan:#2E8FA3;       /* Disciplinary Action accent */
   --emerald:#16A34A;    /* Present % accent */
+  --rose:#E11D48;       /* Injuries accent */
   --positive:#1FA971;
   --negative:#D8514F;
   --negative-tint:#FBEAEA;
@@ -150,6 +151,7 @@ body{
 #sickPanel{--accent:var(--amber);}
 #feedbackPanel{--accent:var(--violet);}
 #presentPanel{--accent:var(--emerald);}
+#injuriesPanel{--accent:var(--rose);}
 
 .stat-panel-header{
   display:flex;

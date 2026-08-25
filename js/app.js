@@ -114,6 +114,17 @@ function render(siteId, periodId) {
   document.getElementById("presentSewingPct").textContent = `${presentSewingPct}%`;
   document.getElementById("presentSewingPresent").textContent = presentSewingPresent.toLocaleString();
 
+  // ── Injuries ─────────────────────────────────────────────────
+  const injuriesTotalMonth = Number(current.injuriesTotal) || 0;
+  const injuriesCriticalMonth = Number(current.injuriesCritical) || 0;
+  const injuriesYtdTotal = ytdSum(periodId, "injuriesTotal");
+  const injuriesYtdCritical = ytdSum(periodId, "injuriesCritical");
+
+  document.getElementById("injuriesTotalBigNum").textContent = injuriesTotalMonth.toLocaleString();
+  document.getElementById("injuriesYtdTotal").textContent = injuriesYtdTotal.toLocaleString();
+  document.getElementById("injuriesCriticalMonth").textContent = injuriesCriticalMonth.toLocaleString();
+  document.getElementById("injuriesYtdCritical").textContent = injuriesYtdCritical.toLocaleString();
+
   // ── Total Manpower ──────────────────────────────────────────
   const workerManpower = Number(current.workerManpower) || 0;
   const nonWorkerManpower = Number(current.nonWorkerManpower) || 0;

@@ -82,13 +82,23 @@ export const TOPICS = [
       { key: "presentSewingPresent", label: "Sewing worker present", type: "number" }
     ]
   },
+  {
+    id: "injuries",
+    title: "Injuries",
+    icon: "user-round-x",
+    enabled: true,
+    customAdminUI: true, // has its own year-at-a-glance table in admin.js — skipped by the generic form
+    fields: [
+      { key: "injuriesTotal", label: "Total injuries (this month)", type: "number" },
+      { key: "injuriesCritical", label: "Critical injuries (this month)", type: "number" }
+    ]
+  },
 
   // ── Not built yet — next topics to add, one at a time ──────
   { id: "directManpower", title: "Direct Manpower", icon: "user-check", enabled: false, fields: [] },
   { id: "manpowerShortage", title: "Manpower excess/(shortage)", icon: "shield-alert", enabled: false, fields: [] },
   { id: "training", title: "Training", icon: "presentation", enabled: false, fields: [] },
   { id: "turnover", title: "Employee Turnover", icon: "refresh-cw", enabled: false, fields: [] },
-  { id: "injuries", title: "Injuries", icon: "user-round-x", enabled: false, fields: [] },
   { id: "attendance", title: "Attendance through manual adjustment", icon: "pencil-line", enabled: false, fields: [] },
   { id: "cash", title: "Cash payment on wages", icon: "banknote", enabled: false, fields: [] },
   { id: "unpaid", title: "Employees with unpaid wage", icon: "credit-card-off", enabled: false, fields: [] },

@@ -164,6 +164,34 @@
   </div>
 
   <div class="admin-panel">
+    <h2 style="margin-top:0;">Injuries — yearly entry</h2>
+    <p class="hint" style="margin-top:-6px;margin-bottom:14px;">
+      Enter each month's injury count and how many of those were critical.
+    </p>
+    <div class="form-grid">
+      <div class="field">
+        <label>Plant</label>
+        <select id="injuriesSite"></select>
+      </div>
+      <div class="field">
+        <label>Year</label>
+        <select id="injuriesYear"></select>
+      </div>
+    </div>
+
+    <table class="month-table" id="injuriesMonthTable">
+      <thead>
+        <tr><th>Month</th><th>Total Injuries</th><th>Critical Injuries</th></tr>
+      </thead>
+      <tbody><!-- 12 rows injected by admin.js --></tbody>
+    </table>
+
+    <div style="margin-top:16px;">
+      <button class="btn primary" id="saveInjuriesYearBtn"><i data-lucide="save"></i> Save Injuries (whole year)</button>
+    </div>
+  </div>
+
+  <div class="admin-panel">
     <h2 style="margin-top:0;">Disciplinary Action — yearly entry (cumulative)</h2>
     <p class="hint" style="margin-top:-6px;margin-bottom:14px;">
       Pick Plant, Month and Year, then enter this year's <b>cumulative totals as of that month</b> —
