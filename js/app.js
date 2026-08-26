@@ -167,7 +167,7 @@ function render(siteId, periodId) {
   let grandActions = 0, grandEmployees = 0;
   DEPARTMENTS.forEach(d => {
     const v = deptData[d.key] || {};
-    grandActions += Number(v.actions) || 0;
+    grandActions += (Number(v.worker) || 0) + (Number(v.nonWorker) || 0);
     grandEmployees += Number(v.employees) || 0;
   });
   const grandPct = grandEmployees > 0 ? Math.round((grandActions / grandEmployees) * 1000) / 10 : 0;

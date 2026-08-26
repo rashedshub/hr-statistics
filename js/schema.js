@@ -136,7 +136,7 @@ TOPICS.push({
   enabled: true,
   customAdminUI: true, // one-month-at-a-time entry with two breakdown tables — built in admin.js
   fields: [
-    { key: "disciplinaryDept", label: "By department: { actions, employees } per department", type: "map" },
+    { key: "disciplinaryDept", label: "By department: { worker, nonWorker, employees } per department", type: "map" },
     { key: "disciplinaryLetter", label: "By letter type (Production only): { nonWorker, worker } per type", type: "map" }
   ]
 });

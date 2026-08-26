@@ -253,12 +253,14 @@
     <div class="form-group-title" style="margin-top:20px;">By department (function) — year to date</div>
     <table class="month-table" id="disciplinaryDeptTable">
       <thead>
-        <tr><th>Department</th><th># Disciplinary Action Received (YTD)</th><th>Nos of Employee</th><th>% (auto)</th></tr>
+        <tr><th>Department</th><th>Worker (YTD)</th><th>Non Worker (YTD)</th><th>Total (auto)</th><th>Nos of Employee</th><th>% (auto)</th></tr>
       </thead>
       <tbody><!-- 7 rows injected by admin.js --></tbody>
       <tfoot>
         <tr>
           <td>Grand Total</td>
+          <td><span class="row-total" id="discDeptTotalWorker">0</span></td>
+          <td><span class="row-total" id="discDeptTotalNonWorker">0</span></td>
           <td><span class="row-total" id="discDeptTotalActions">0</span></td>
           <td><span class="row-total" id="discDeptTotalEmployees">0</span></td>
           <td><span class="row-total" id="discDeptTotalPct">0%</span></td>

@@ -35,12 +35,26 @@
     <p class="disc-page-subtitle">Cumulative year-to-date figures as of the selected month.</p>
 
     <div class="disc-summary-row">
+      <div class="disc-summary-stat"><span>Worker (YTD)</span><b class="tabular" id="discGrandWorker">–</b></div>
+      <div class="disc-summary-stat"><span>Non Worker (YTD)</span><b class="tabular" id="discGrandNonWorker">–</b></div>
       <div class="disc-summary-stat"><span>Total actions (YTD)</span><b class="tabular" id="discGrandActions">–</b></div>
-      <div class="disc-summary-stat"><span>Overall %</span><b class="tabular" id="discGrandPct">–</b></div>
       <div class="disc-summary-stat"><span>Total employees</span><b class="tabular" id="discGrandEmployees">–</b></div>
+      <div class="disc-summary-stat"><span>Overall %</span><b class="tabular" id="discGrandPct">–</b></div>
       <div class="disc-summary-stat"><span>Production actions</span><b class="tabular" id="discProductionActions">–</b></div>
       <div class="disc-summary-stat"><span>Production %</span><b class="tabular" id="discProductionPct">–</b></div>
     </div>
+
+    <section class="disc-section">
+      <div class="disc-section-head">
+        <h2>Disciplinary action received, by department</h2>
+      </div>
+      <table class="detail-table">
+        <thead>
+          <tr><th>Department</th><th>Worker</th><th>Non Worker</th><th>Total</th><th>Nos of Employee</th><th>% Employees Receiving Action</th></tr>
+        </thead>
+        <tbody id="discDeptTableBody"></tbody>
+      </table>
+    </section>
 
     <section class="disc-section">
       <div class="disc-section-head">

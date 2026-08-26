@@ -231,34 +231,44 @@ injuriesMonthTableBody.innerHTML = MONTHS.map(m => `
 discDeptTableBody.innerHTML = DEPARTMENTS.map(d => `
   <tr>
     <td>${d.name}</td>
-    <td><input type="number" step="any" id="discDeptActions_${d.key}"></td>
+    <td><input type="number" step="any" id="discDeptWorker_${d.key}"></td>
+    <td><input type="number" step="any" id="discDeptNonWorker_${d.key}"></td>
+    <td><span class="row-total" id="discDeptRowTotal_${d.key}">0</span></td>
     <td><input type="number" step="any" id="discDeptEmployees_${d.key}"></td>
     <td><span class="row-total" id="discDeptPct_${d.key}">0%</span></td>
   </tr>`).join("");
 
 DEPARTMENTS.forEach(d => {
-  const recalc = () => { updateDeptRowPct(d.key); updateDeptTotals(); };
-  document.getElementById(`discDeptActions_${d.key}`).addEventListener("input", recalc);
+  const recalc = () => { updateDeptRow(d.key); updateDeptTotals(); };
+  document.getElementById(`discDeptWorker_${d.key}`).addEventListener("input", recalc);
+  document.getElementById(`discDeptNonWorker_${d.key}`).addEventListener("input", recalc);
   document.getElementById(`discDeptEmployees_${d.key}`).addEventListener("input", recalc);
 });
 
-function updateDeptRowPct(key) {
-  const actions = Number(document.getElementById(`discDeptActions_${key}`).value) || 0;
+function updateDeptRow(key) {
+  const worker = Number(document.getElementById(`discDeptWorker_${key}`).value) || 0;
+  const nonWorker = Number(document.getElementById(`discDeptNonWorker_${key}`).value) || 0;
   const employees = Number(document.getElementById(`discDeptEmployees_${key}`).value) || 0;
-  const pct = employees > 0 ? Math.round((actions / employees) * 1000) / 10 : 0;
+  const total = worker + nonWorker;
+  const pct = employees > 0 ? Math.round((total / employees) * 1000) / 10 : 0;
+  document.getElementById(`discDeptRowTotal_${key}`).textContent = total.toLocaleString();
   document.getElementById(`discDeptPct_${key}`).textContent = `${pct}%`;
 }
 
 function updateDeptTotals() {
-  let totalActions = 0, totalEmployees = 0;
+  let totalWorker = 0, totalNonWorker = 0, totalEmployees = 0;
   DEPARTMENTS.forEach(d => {
-    totalActions += Number(document.getElementById(`discDeptActions_${d.key}`).value) || 0;
+    totalWorker += Number(document.getElementById(`discDeptWorker_${d.key}`).value) || 0;
+    totalNonWorker += Number(document.getElementById(`discDeptNonWorker_${d.key}`).value) || 0;
     totalEmployees += Number(document.getElementById(`discDeptEmployees_${d.key}`).value) || 0;
   });
-  const totalPct = totalEmployees > 0 ? Math.round((totalActions / totalEmployees) * 1000) / 10 : 0;
-  document.getElementById("discDeptTotalActions").textContent = totalActions.toLocaleString();
+  const grandTotal = totalWorker + totalNonWorker;
+  const grandPct = totalEmployees > 0 ? Math.round((grandTotal / totalEmployees) * 1000) / 10 : 0;
+  document.getElementById("discDeptTotalWorker").textContent = totalWorker.toLocaleString();
+  document.getElementById("discDeptTotalNonWorker").textContent = totalNonWorker.toLocaleString();
+  document.getElementById("discDeptTotalActions").textContent = grandTotal.toLocaleString();
   document.getElementById("discDeptTotalEmployees").textContent = totalEmployees.toLocaleString();
-  document.getElementById("discDeptTotalPct").textContent = `${totalPct}%`;
+  document.getElementById("discDeptTotalPct").textContent = `${grandPct}%`;
 }
 
 // ── Disciplinary Action — letter-type table (Production only) ─
@@ -754,9 +764,10 @@ function loadDisciplinaryForm() {
 
   DEPARTMENTS.forEach(d => {
     const v = deptData[d.key] || {};
-    document.getElementById(`discDeptActions_${d.key}`).value = v.actions || "";
+    document.getElementById(`discDeptWorker_${d.key}`).value = v.worker || "";
+    document.getElementById(`discDeptNonWorker_${d.key}`).value = v.nonWorker || "";
     document.getElementById(`discDeptEmployees_${d.key}`).value = v.employees || "";
-    updateDeptRowPct(d.key);
+    updateDeptRow(d.key);
   });
   updateDeptTotals();
 
@@ -777,7 +788,8 @@ saveDisciplinaryBtn.addEventListener("click", async () => {
   const disciplinaryDept = {};
   DEPARTMENTS.forEach(d => {
     disciplinaryDept[d.key] = {
-      actions: Number(document.getElementById(`discDeptActions_${d.key}`).value) || 0,
+      worker: Number(document.getElementById(`discDeptWorker_${d.key}`).value) || 0,
+      nonWorker: Number(document.getElementById(`discDeptNonWorker_${d.key}`).value) || 0,
       employees: Number(document.getElementById(`discDeptEmployees_${d.key}`).value) || 0
     };
   });

@@ -68,26 +68,69 @@ function render(siteId, periodId) {
   const deptData = current.disciplinaryDept || {};
   const letterData = current.disciplinaryLetter || {};
 
-  let grandActions = 0, grandEmployees = 0;
+  let grandWorker = 0, grandNonWorker = 0, grandEmployees = 0;
   DEPARTMENTS.forEach(d => {
     const v = deptData[d.key] || {};
-    grandActions += Number(v.actions) || 0;
+    grandWorker += Number(v.worker) || 0;
+    grandNonWorker += Number(v.nonWorker) || 0;
     grandEmployees += Number(v.employees) || 0;
   });
+  const grandActions = grandWorker + grandNonWorker;
   const grandPct = grandEmployees > 0 ? Math.round((grandActions / grandEmployees) * 1000) / 10 : 0;
   const prod = deptData["production"] || {};
-  const prodActions = Number(prod.actions) || 0;
+  const prodActions = (Number(prod.worker) || 0) + (Number(prod.nonWorker) || 0);
   const prodEmployees = Number(prod.employees) || 0;
   const prodPct = prodEmployees > 0 ? Math.round((prodActions / prodEmployees) * 1000) / 10 : 0;
 
   document.getElementById("discGrandActions").textContent = grandActions.toLocaleString();
   document.getElementById("discGrandPct").textContent = `${grandPct}%`;
   document.getElementById("discGrandEmployees").textContent = grandEmployees.toLocaleString();
+  document.getElementById("discGrandWorker").textContent = grandWorker.toLocaleString();
+  document.getElementById("discGrandNonWorker").textContent = grandNonWorker.toLocaleString();
   document.getElementById("discProductionActions").textContent = prodActions.toLocaleString();
   document.getElementById("discProductionPct").textContent = `${prodPct}%`;
 
+  drawDeptTable(deptData);
   drawCharts(deptData, letterData);
   syncUrl(siteId, periodId);
+}
+
+function drawDeptTable(deptData) {
+  const rows = DEPARTMENTS.map(d => {
+    const v = deptData[d.key] || {};
+    const worker = Number(v.worker) || 0;
+    const nonWorker = Number(v.nonWorker) || 0;
+    const employees = Number(v.employees) || 0;
+    const total = worker + nonWorker;
+    const pct = employees > 0 ? Math.round((total / employees) * 1000) / 10 : 0;
+    return { name: d.name, worker, nonWorker, total, employees, pct };
+  });
+  const grand = rows.reduce((acc, r) => ({
+    worker: acc.worker + r.worker, nonWorker: acc.nonWorker + r.nonWorker,
+    total: acc.total + r.total, employees: acc.employees + r.employees
+  }), { worker: 0, nonWorker: 0, total: 0, employees: 0 });
+  const grandPct = grand.employees > 0 ? Math.round((grand.total / grand.employees) * 1000) / 10 : 0;
+
+  const body = rows.map(r => `
+    <tr>
+      <td>${escapeHtml(r.name)}</td>
+      <td>${r.worker.toLocaleString()}</td>
+      <td>${r.nonWorker.toLocaleString()}</td>
+      <td>${r.total.toLocaleString()}</td>
+      <td>${r.employees.toLocaleString()}</td>
+      <td>${r.pct}%</td>
+    </tr>`).join("");
+  const footer = `
+    <tr style="font-weight:700;border-top:2px solid var(--line);">
+      <td>Grand Total</td>
+      <td>${grand.worker.toLocaleString()}</td>
+      <td>${grand.nonWorker.toLocaleString()}</td>
+      <td>${grand.total.toLocaleString()}</td>
+      <td>${grand.employees.toLocaleString()}</td>
+      <td>${grandPct}%</td>
+    </tr>`;
+
+  document.getElementById("discDeptTableBody").innerHTML = body + footer;
 }
 
 // ── Charts ──────────────────────────────────────────────────
@@ -100,11 +143,15 @@ function destroyChart(key) {
 
 function drawCharts(deptData, letterData) {
   const deptLabels = DEPARTMENTS.map(d => d.name);
-  const deptActions = DEPARTMENTS.map(d => Number((deptData[d.key] || {}).actions) || 0);
+  const deptActions = DEPARTMENTS.map(d => {
+    const v = deptData[d.key] || {};
+    return (Number(v.worker) || 0) + (Number(v.nonWorker) || 0);
+  });
   const deptRates = DEPARTMENTS.map(d => {
     const v = deptData[d.key] || {};
-    const actions = Number(v.actions) || 0, emp = Number(v.employees) || 0;
-    return emp > 0 ? Math.round((actions / emp) * 1000) / 10 : 0;
+    const total = (Number(v.worker) || 0) + (Number(v.nonWorker) || 0);
+    const emp = Number(v.employees) || 0;
+    return emp > 0 ? Math.round((total / emp) * 1000) / 10 : 0;
   });
 
   destroyChart("dept");
