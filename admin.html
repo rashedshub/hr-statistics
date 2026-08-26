@@ -23,7 +23,9 @@
 
 <div class="admin-shell" id="adminShell" style="display:none;">
 
-  <div class="admin-panel">
+  <div class="role-banner" id="roleBanner"></div>
+
+  <div class="admin-panel" id="plantsPanel">
     <h2 style="margin-top:0;">Plants</h2>
     <div class="form-grid" style="margin-bottom:14px;">
       <div class="field">
@@ -35,6 +37,41 @@
       </div>
     </div>
     <ul class="reports-list" id="sitesList"></ul>
+  </div>
+
+  <div class="admin-panel" id="manageAdminsPanel">
+    <h2 style="margin-top:0;">Manage Admins</h2>
+    <p class="hint" style="margin-top:-6px;margin-bottom:14px;">
+      To add someone: first create their login in <b>Firebase Console → Authentication → Users → Add user</b>.
+      Firebase will show you their <b>User UID</b> — copy it and paste it below along with the access you want to grant.
+      There's no way to look up a UID from within this app, so this manual step is required.
+    </p>
+    <div class="form-grid">
+      <div class="field">
+        <label>User UID (from Firebase Console)</label>
+        <input type="text" id="newAdminUid" placeholder="e.g. aB3xY9k...">
+      </div>
+      <div class="field">
+        <label>Label (for your reference, e.g. their email)</label>
+        <input type="text" id="newAdminLabel" placeholder="e.g. sarah@company.com">
+      </div>
+      <div class="field">
+        <label>Access level</label>
+        <select id="newAdminRole">
+          <option value="site">Plant Admin — one plant only</option>
+          <option value="super">Super Admin — all plants</option>
+        </select>
+      </div>
+      <div class="field" id="newAdminSiteWrap">
+        <label>Plant</label>
+        <select id="newAdminSite"></select>
+      </div>
+    </div>
+    <div style="margin-top:14px;">
+      <button class="btn primary" id="saveAdminBtn"><i data-lucide="user-plus"></i> Grant access</button>
+    </div>
+
+    <ul class="reports-list" id="adminsList" style="margin-top:18px;"></ul>
   </div>
 
   <div class="admin-panel">

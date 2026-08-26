@@ -5,7 +5,7 @@ import {
   getAuth, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, collection, getDocs, query, orderBy, doc, setDoc, addDoc, deleteDoc
+  getFirestore, collection, getDocs, query, orderBy, doc, getDoc, setDoc, addDoc, deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const app = initializeApp(firebaseConfig);
@@ -21,10 +21,21 @@ for (let y = CURRENT_YEAR - 2; y <= CURRENT_YEAR + 1; y++) YEARS.push(y);
 const checkingMsg = document.getElementById("checkingMsg");
 const adminShell = document.getElementById("adminShell");
 const logoutBtn = document.getElementById("logoutBtn");
+const roleBanner = document.getElementById("roleBanner");
+const plantsPanel = document.getElementById("plantsPanel");
+const manageAdminsPanel = document.getElementById("manageAdminsPanel");
 
 const sitesList = document.getElementById("sitesList");
 const newSiteName = document.getElementById("newSiteName");
 const addSiteBtn = document.getElementById("addSiteBtn");
+
+const newAdminUid = document.getElementById("newAdminUid");
+const newAdminLabel = document.getElementById("newAdminLabel");
+const newAdminRole = document.getElementById("newAdminRole");
+const newAdminSiteWrap = document.getElementById("newAdminSiteWrap");
+const newAdminSite = document.getElementById("newAdminSite");
+const saveAdminBtn = document.getElementById("saveAdminBtn");
+const adminsList = document.getElementById("adminsList");
 
 const leaveSite = document.getElementById("leaveSite");
 const leaveYear = document.getElementById("leaveYear");
@@ -72,16 +83,34 @@ const toast = document.getElementById("toast");
 
 let sitesCache = [];
 let reportsCache = {}; // siteId -> { periodId: data }
+let currentAdminRole = null;   // "super" | "site"
+let currentAdminSiteId = null; // set when role === "site"
 
 // ── Auth guard ────────────────────────────────────────────
 onAuthStateChanged(auth, async (user) => {
-  if (user) {
-    checkingMsg.style.display = "none";
-    adminShell.style.display = "block";
-    await refreshSites();
-  } else {
+  if (!user) {
     window.location.replace("login.html");
+    return;
   }
+
+  const adminSnap = await getDoc(doc(db, "admins", user.uid));
+  if (!adminSnap.exists()) {
+    // Signed in with Firebase Auth, but no access has been granted (or it was revoked).
+    await signOut(auth);
+    window.location.replace("login.html");
+    return;
+  }
+
+  const adminData = adminSnap.data();
+  currentAdminRole = adminData.role;
+  currentAdminSiteId = adminData.siteId || null;
+
+  checkingMsg.style.display = "none";
+  adminShell.style.display = "block";
+  plantsPanel.style.display = currentAdminRole === "super" ? "" : "none";
+  manageAdminsPanel.style.display = currentAdminRole === "super" ? "" : "none";
+
+  await refreshSites();
 });
 
 logoutBtn.addEventListener("click", () => signOut(auth).then(() => window.location.replace("login.html")));
@@ -286,20 +315,20 @@ async function refreshSites() {
     </li>`).join("") || `<li><span style="color:#8794a8;">No plants yet — add one above.</span></li>`;
 
   const options = sitesCache.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
-  leaveSite.innerHTML = options;
-  manpowerSite.innerHTML = options;
-  feedbackSite.innerHTML = options;
-  presentSite.innerHTML = options;
-  injuriesSite.innerHTML = options;
-  disciplinarySite.innerHTML = options;
-  formSite.innerHTML = options;
-  reportsSiteFilter.innerHTML = options;
+  [leaveSite, manpowerSite, feedbackSite, presentSite, injuriesSite, disciplinarySite, formSite, reportsSiteFilter]
+    .forEach(sel => applySiteOptions(sel, options));
+  newAdminSite.innerHTML = options; // Manage Admins panel — super admins only, always full list
 
   sitesList.querySelectorAll("button.del").forEach(btn => {
     btn.addEventListener("click", () => deleteSite(btn.dataset.site));
   });
 
-  if (sitesCache.length) {
+  updateRoleBanner();
+
+  const scopedSiteId = currentAdminRole === "site" ? currentAdminSiteId : null;
+  const hasValidScope = currentAdminRole === "super" || sitesCache.some(s => s.id === scopedSiteId);
+
+  if (sitesCache.length && hasValidScope) {
     await fetchSiteReports(leaveSite.value);
     loadLeaveYearTable();
     loadManpowerYearTable();
@@ -308,6 +337,37 @@ async function refreshSites() {
     loadInjuriesYearTable();
     loadDisciplinaryForm();
     await refreshReportsList();
+  } else if (!hasValidScope) {
+    showToast("Your assigned plant could not be found. Contact your administrator.");
+  }
+
+  if (currentAdminRole === "super") await refreshAdminsList();
+}
+
+// For Plant Admins, locks a <select> to their one assigned plant (and disables it).
+// Super Admins get the full list, editable as normal.
+function applySiteOptions(selectEl, allOptionsHtml) {
+  if (currentAdminRole === "site") {
+    const site = sitesCache.find(s => s.id === currentAdminSiteId);
+    selectEl.innerHTML = site
+      ? `<option value="${site.id}">${escapeHtml(site.name)}</option>`
+      : `<option value="">(assigned plant not found)</option>`;
+    if (site) selectEl.value = site.id;
+    selectEl.disabled = true;
+  } else {
+    selectEl.innerHTML = allOptionsHtml;
+    selectEl.disabled = false;
+  }
+}
+
+function updateRoleBanner() {
+  if (currentAdminRole === "super") {
+    roleBanner.textContent = "Signed in as Super Admin — full access to every plant.";
+  } else {
+    const siteName = sitesCache.find(s => s.id === currentAdminSiteId)?.name;
+    roleBanner.textContent = siteName
+      ? `Signed in as Plant Admin — scoped to ${siteName} only.`
+      : "Signed in as Plant Admin — your assigned plant could not be found.";
   }
 }
 
@@ -329,6 +389,78 @@ async function deleteSite(siteId) {
   showToast("Plant deleted");
   delete reportsCache[siteId];
   await refreshSites();
+}
+
+// ── Manage Admins (super admins only) ───────────────────────
+newAdminRole.addEventListener("change", () => {
+  newAdminSiteWrap.style.display = newAdminRole.value === "site" ? "" : "none";
+});
+
+async function refreshAdminsList() {
+  const snap = await getDocs(collection(db, "admins"));
+  const rows = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+
+  adminsList.innerHTML = rows.map(r => {
+    const accessLabel = r.role === "super"
+      ? "Super Admin"
+      : `Plant Admin — ${escapeHtml(sitesCache.find(s => s.id === r.siteId)?.name || r.siteId || "unknown plant")}`;
+    return `
+      <li>
+        <span>${escapeHtml(r.label || r.uid)} <span style="color:#8794a8;">(${accessLabel})</span></span>
+        <span class="row-actions">
+          <button class="del" data-uid="${r.uid}">Revoke</button>
+        </span>
+      </li>`;
+  }).join("") || `<li><span style="color:#8794a8;">No admins granted yet — add yourself first as Super Admin via the Firebase Console.</span></li>`;
+
+  adminsList.querySelectorAll("button.del").forEach(btn => {
+    btn.addEventListener("click", () => revokeAdmin(btn.dataset.uid));
+  });
+}
+
+saveAdminBtn.addEventListener("click", async () => {
+  const uid = newAdminUid.value.trim();
+  if (!uid) { showToast("Enter a User UID"); return; }
+  const role = newAdminRole.value;
+  const siteId = role === "site" ? newAdminSite.value : null;
+  if (role === "site" && !siteId) { showToast("Choose a plant"); return; }
+
+  saveAdminBtn.disabled = true;
+  try {
+    await setDoc(doc(db, "admins", uid), {
+      role,
+      siteId,
+      label: newAdminLabel.value.trim() || null,
+      updatedAt: new Date().toISOString()
+    });
+    showToast("Admin access granted");
+    newAdminUid.value = "";
+    newAdminLabel.value = "";
+    await refreshAdminsList();
+  } catch (err) {
+    console.error(err);
+    showToast("Failed to save — check console");
+  } finally {
+    saveAdminBtn.disabled = false;
+  }
+});
+
+async function revokeAdmin(uid) {
+  const isSelf = uid === auth.currentUser?.uid;
+  const msg = isSelf
+    ? "This is YOUR OWN account. Revoking it will lock you out immediately. Continue?"
+    : "Revoke this admin's access?";
+  if (!confirm(msg)) return;
+
+  await deleteDoc(doc(db, "admins", uid));
+  showToast("Access revoked");
+
+  if (isSelf) {
+    await signOut(auth);
+    window.location.replace("login.html");
+    return;
+  }
+  await refreshAdminsList();
 }
 
 // ── Shared reports cache (used by both the yearly table and the list) ─

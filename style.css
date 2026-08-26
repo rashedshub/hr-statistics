@@ -469,6 +469,16 @@ body{
 .btn.danger{background:var(--negative);border-color:var(--negative);color:#fff;}
 
 .admin-shell{max-width:1000px;margin:0 auto;padding:28px 20px 60px;}
+.role-banner{
+  background:var(--brand-tint);
+  border:1px solid var(--line);
+  border-radius:var(--radius-md);
+  padding:12px 16px;
+  font-size:13px;
+  font-weight:600;
+  color:var(--brand);
+  margin-bottom:20px;
+}
 .admin-shell h2{font-family:var(--font-display);color:var(--ink);font-size:17px;}
 .admin-panel{
   background:var(--surface);border:1px solid var(--line);border-radius:var(--radius-lg);

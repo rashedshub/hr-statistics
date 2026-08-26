@@ -2,15 +2,45 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Anyone can VIEW the dashboard data (public link).
-    // Only signed-in users (your admins) can create/edit/delete it.
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function adminData() {
+      return get(/databases/$(database)/documents/admins/$(request.auth.uid)).data;
+    }
+    function isSuperAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        && adminData().role == 'super';
+    }
+    function isSiteAdmin(siteId) {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        && adminData().role == 'site'
+        && adminData().siteId == siteId;
+    }
+    function canManageSite(siteId) {
+      return isSuperAdmin() || isSiteAdmin(siteId);
+    }
+
+    // Admin role assignments.
+    // - A user can always read their OWN assignment (to check their own access).
+    // - Only super admins can read the full list, or write (grant/revoke) any assignment.
+    match /admins/{uid} {
+      allow read: if isSignedIn() && (request.auth.uid == uid || isSuperAdmin());
+      allow write: if isSuperAdmin();
+    }
+
+    // Plants: publicly viewable. Only super admins can create/rename/delete a plant.
+    // Monthly report data: publicly viewable. Writable by a super admin, or by the
+    // plant admin assigned to that specific plant.
     match /sites/{siteId} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isSuperAdmin();
 
       match /reports/{periodId} {
         allow read: if true;
-        allow write: if request.auth != null;
+        allow write: if canManageSite(siteId);
       }
     }
   }
