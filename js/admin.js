@@ -1,5 +1,5 @@
 import { firebaseConfig } from "./firebase-config.js";
-import { enabledTopics, MONTHS, DEPARTMENTS, LETTER_TYPES, periodIdFor, periodLabelFor } from "./schema.js";
+import { enabledTopics, MONTHS, departmentsForSite, LETTER_TYPES, periodIdFor, periodLabelFor } from "./schema.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, onAuthStateChanged, signOut
@@ -64,8 +64,10 @@ const injuriesMonthTableBody = document.querySelector("#injuriesMonthTable tbody
 const saveInjuriesYearBtn = document.getElementById("saveInjuriesYearBtn");
 
 const disciplinarySite = document.getElementById("disciplinarySite");
-const disciplinaryMonth = document.getElementById("disciplinaryMonth");
-const disciplinaryYear = document.getElementById("disciplinaryYear");
+const disciplinaryStartMonth = document.getElementById("disciplinaryStartMonth");
+const disciplinaryStartYear = document.getElementById("disciplinaryStartYear");
+const disciplinaryEndMonth = document.getElementById("disciplinaryEndMonth");
+const disciplinaryEndYear = document.getElementById("disciplinaryEndYear");
 const discDeptTableBody = document.querySelector("#disciplinaryDeptTable tbody");
 const discLetterTableBody = document.querySelector("#disciplinaryLetterTable tbody");
 const saveDisciplinaryBtn = document.getElementById("saveDisciplinaryBtn");
@@ -130,10 +132,15 @@ presentYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).joi
 presentYear.value = CURRENT_YEAR;
 injuriesYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).join("");
 injuriesYear.value = CURRENT_YEAR;
-disciplinaryYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).join("");
-disciplinaryYear.value = CURRENT_YEAR;
-disciplinaryMonth.innerHTML = MONTHS.map(m => `<option value="${m.num}">${m.name}</option>`).join("");
-disciplinaryMonth.value = CURRENT_MONTH;
+const monthOptionsHtml = MONTHS.map(m => `<option value="${m.num}">${m.name}</option>`).join("");
+disciplinaryStartMonth.innerHTML = monthOptionsHtml;
+disciplinaryStartMonth.value = "07"; // default: July, since that's the common fiscal-year start
+disciplinaryStartYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).join("");
+disciplinaryStartYear.value = CURRENT_YEAR;
+disciplinaryEndMonth.innerHTML = monthOptionsHtml;
+disciplinaryEndMonth.value = "06";
+disciplinaryEndYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).join("");
+disciplinaryEndYear.value = CURRENT_YEAR + 1;
 
 leaveMonthTableBody.innerHTML = MONTHS.map(m => `
   <tr>
@@ -227,23 +234,29 @@ injuriesMonthTableBody.innerHTML = MONTHS.map(m => `
     <td><input type="number" step="any" id="injuriesCritical_${m.num}"></td>
   </tr>`).join("");
 
-// ── Disciplinary Action — department table ─────────────────
-discDeptTableBody.innerHTML = DEPARTMENTS.map(d => `
-  <tr>
-    <td>${d.name}</td>
-    <td><input type="number" step="any" id="discDeptWorker_${d.key}"></td>
-    <td><input type="number" step="any" id="discDeptNonWorker_${d.key}"></td>
-    <td><span class="row-total" id="discDeptRowTotal_${d.key}">0</span></td>
-    <td><input type="number" step="any" id="discDeptEmployees_${d.key}"></td>
-    <td><span class="row-total" id="discDeptPct_${d.key}">0%</span></td>
-  </tr>`).join("");
+// ── Disciplinary Action — department table (rows depend on the selected plant) ─
+let currentDeptList = []; // set by buildDeptTable(), used by the row/total functions below
 
-DEPARTMENTS.forEach(d => {
-  const recalc = () => { updateDeptRow(d.key); updateDeptTotals(); };
-  document.getElementById(`discDeptWorker_${d.key}`).addEventListener("input", recalc);
-  document.getElementById(`discDeptNonWorker_${d.key}`).addEventListener("input", recalc);
-  document.getElementById(`discDeptEmployees_${d.key}`).addEventListener("input", recalc);
-});
+function buildDeptTable(siteName) {
+  currentDeptList = departmentsForSite(siteName);
+
+  discDeptTableBody.innerHTML = currentDeptList.map(d => `
+    <tr>
+      <td>${d.name}</td>
+      <td><input type="number" step="any" id="discDeptWorker_${d.key}"></td>
+      <td><input type="number" step="any" id="discDeptNonWorker_${d.key}"></td>
+      <td><span class="row-total" id="discDeptRowTotal_${d.key}">0</span></td>
+      <td><input type="number" step="any" id="discDeptEmployees_${d.key}"></td>
+      <td><span class="row-total" id="discDeptPct_${d.key}">0%</span></td>
+    </tr>`).join("");
+
+  currentDeptList.forEach(d => {
+    const recalc = () => { updateDeptRow(d.key); updateDeptTotals(); };
+    document.getElementById(`discDeptWorker_${d.key}`).addEventListener("input", recalc);
+    document.getElementById(`discDeptNonWorker_${d.key}`).addEventListener("input", recalc);
+    document.getElementById(`discDeptEmployees_${d.key}`).addEventListener("input", recalc);
+  });
+}
 
 function updateDeptRow(key) {
   const worker = Number(document.getElementById(`discDeptWorker_${key}`).value) || 0;
@@ -257,7 +270,7 @@ function updateDeptRow(key) {
 
 function updateDeptTotals() {
   let totalWorker = 0, totalNonWorker = 0, totalEmployees = 0;
-  DEPARTMENTS.forEach(d => {
+  currentDeptList.forEach(d => {
     totalWorker += Number(document.getElementById(`discDeptWorker_${d.key}`).value) || 0;
     totalNonWorker += Number(document.getElementById(`discDeptNonWorker_${d.key}`).value) || 0;
     totalEmployees += Number(document.getElementById(`discDeptEmployees_${d.key}`).value) || 0;
@@ -345,7 +358,7 @@ async function refreshSites() {
     loadFeedbackYearTable();
     loadPresentYearTable();
     loadInjuriesYearTable();
-    loadDisciplinaryForm();
+    await loadDisciplinaryForm();
     await refreshReportsList();
   } else if (!hasValidScope) {
     showToast("Your assigned plant could not be found. Contact your administrator.");
@@ -747,22 +760,34 @@ saveInjuriesYearBtn.addEventListener("click", async () => {
   }
 });
 
-// ── Disciplinary Action — single-month load/save ────────────
-disciplinarySite.addEventListener("change", async () => {
-  await fetchSiteReports(disciplinarySite.value);
-  loadDisciplinaryForm();
-});
-disciplinaryMonth.addEventListener("change", loadDisciplinaryForm);
-disciplinaryYear.addEventListener("change", loadDisciplinaryForm);
+// ── Disciplinary Action — single summary record per plant ───
+disciplinarySite.addEventListener("change", () => loadDisciplinaryForm());
 
-function loadDisciplinaryForm() {
+function siteNameFor(siteId) {
+  return sitesCache.find(s => s.id === siteId)?.name || "";
+}
+
+async function loadDisciplinaryForm() {
   const siteId = disciplinarySite.value;
-  const periodId = periodIdFor(disciplinaryYear.value, disciplinaryMonth.value);
-  const rec = (reportsCache[siteId] || {})[periodId] || {};
-  const deptData = rec.disciplinaryDept || {};
-  const letterData = rec.disciplinaryLetter || {};
+  if (!siteId) return;
 
-  DEPARTMENTS.forEach(d => {
+  buildDeptTable(siteNameFor(siteId));
+
+  let data = {};
+  try {
+    const snap = await getDoc(doc(db, "sites", siteId, "meta", "disciplinary"));
+    if (snap.exists()) data = snap.data();
+  } catch (err) {
+    console.error(err);
+  }
+
+  disciplinaryStartMonth.value = data.startMonth || "07";
+  disciplinaryStartYear.value = data.startYear || CURRENT_YEAR;
+  disciplinaryEndMonth.value = data.endMonth || "06";
+  disciplinaryEndYear.value = data.endYear || (CURRENT_YEAR + 1);
+
+  const deptData = data.disciplinaryDept || {};
+  currentDeptList.forEach(d => {
     const v = deptData[d.key] || {};
     document.getElementById(`discDeptWorker_${d.key}`).value = v.worker || "";
     document.getElementById(`discDeptNonWorker_${d.key}`).value = v.nonWorker || "";
@@ -771,6 +796,7 @@ function loadDisciplinaryForm() {
   });
   updateDeptTotals();
 
+  const letterData = data.disciplinaryLetter || {};
   LETTER_TYPES.forEach(t => {
     const v = letterData[t.key] || {};
     document.getElementById(`discLetterNonWorker_${t.key}`).value = v.nonWorker || "";
@@ -782,11 +808,9 @@ function loadDisciplinaryForm() {
 saveDisciplinaryBtn.addEventListener("click", async () => {
   const siteId = disciplinarySite.value;
   if (!siteId) { showToast("Add a plant first"); return; }
-  const periodId = periodIdFor(disciplinaryYear.value, disciplinaryMonth.value);
-  const monthName = MONTHS.find(m => m.num === disciplinaryMonth.value)?.name || disciplinaryMonth.value;
 
   const disciplinaryDept = {};
-  DEPARTMENTS.forEach(d => {
+  currentDeptList.forEach(d => {
     disciplinaryDept[d.key] = {
       worker: Number(document.getElementById(`discDeptWorker_${d.key}`).value) || 0,
       nonWorker: Number(document.getElementById(`discDeptNonWorker_${d.key}`).value) || 0,
@@ -801,16 +825,21 @@ saveDisciplinaryBtn.addEventListener("click", async () => {
     };
   });
 
+  const startMonth = disciplinaryStartMonth.value;
+  const startYear = Number(disciplinaryStartYear.value);
+  const endMonth = disciplinaryEndMonth.value;
+  const endYear = Number(disciplinaryEndYear.value);
+  const startName = MONTHS.find(m => m.num === startMonth)?.name || startMonth;
+  const endName = MONTHS.find(m => m.num === endMonth)?.name || endMonth;
+  const periodLabel = `${startName} ${startYear} to ${endName} ${endYear}`;
+
   saveDisciplinaryBtn.disabled = true;
   try {
     await setDoc(
-      doc(db, "sites", siteId, "reports", periodId),
-      { period: periodLabelFor(disciplinaryYear.value, monthName), disciplinaryDept, disciplinaryLetter },
-      { merge: true }
+      doc(db, "sites", siteId, "meta", "disciplinary"),
+      { startMonth, startYear, endMonth, endYear, periodLabel, disciplinaryDept, disciplinaryLetter }
     );
-    showToast(`Saved Disciplinary Action for ${periodId}`);
-    await fetchSiteReports(siteId);
-    await refreshReportsList();
+    showToast(`Saved Disciplinary Action summary (${periodLabel})`);
   } catch (err) {
     console.error(err);
     showToast("Save failed — check console / security rules");
@@ -932,7 +961,6 @@ async function deleteReport(siteId, periodId) {
   if (siteId === feedbackSite.value) loadFeedbackYearTable();
   if (siteId === presentSite.value) loadPresentYearTable();
   if (siteId === injuriesSite.value) loadInjuriesYearTable();
-  if (siteId === disciplinarySite.value) loadDisciplinaryForm();
 }
 
 // ── Utils ─────────────────────────────────────────────────

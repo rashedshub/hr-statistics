@@ -107,8 +107,10 @@ export const TOPICS = [
   { id: "oneonone", title: "Workers one-on-one interview", icon: "users-round", enabled: false, fields: [] }
 ];
 
-// Fixed department (function) list for Disciplinary Action.
-export const DEPARTMENTS = [
+// Department (function) list for Disciplinary Action.
+// Most plants use the default list; specific plants can have their own
+// breakdown — e.g. YHT splits "Accounting & Finance" into two departments.
+export const DEFAULT_DEPARTMENTS = [
   { key: "accounting", name: "Accounting & Finance" },
   { key: "administration", name: "Administration" },
   { key: "commercial", name: "Commercial" },
@@ -118,7 +120,25 @@ export const DEPARTMENTS = [
   { key: "sales", name: "Sales" }
 ];
 
-// Fixed disciplinary-letter-type list (Production only).
+// Keyed by exact plant name (as entered in the Plants panel).
+export const DEPARTMENT_OVERRIDES = {
+  "YHT": [
+    { key: "accounts", name: "Accounts" },
+    { key: "administration", name: "Administration" },
+    { key: "commercial", name: "Commercial" },
+    { key: "finance", name: "Finance" },
+    { key: "hr", name: "HR" },
+    { key: "production", name: "Production" },
+    { key: "quality", name: "Quality" },
+    { key: "sales", name: "Sales" }
+  ]
+};
+
+export function departmentsForSite(siteName) {
+  return DEPARTMENT_OVERRIDES[siteName] || DEFAULT_DEPARTMENTS;
+}
+
+// Fixed disciplinary-letter-type list (Production only) — same for every plant.
 export const LETTER_TYPES = [
   { key: "dismissal", name: "Dismissal" },
   { key: "finalWarning", name: "Final Warning" },
@@ -129,17 +149,11 @@ export const LETTER_TYPES = [
   { key: "verbalWarning", name: "Verbal Warning" }
 ];
 
-TOPICS.push({
-  id: "disciplinary",
-  title: "Disciplinary Action",
-  icon: "scale",
-  enabled: true,
-  customAdminUI: true, // one-month-at-a-time entry with two breakdown tables — built in admin.js
-  fields: [
-    { key: "disciplinaryDept", label: "By department: { worker, nonWorker, employees } per department", type: "map" },
-    { key: "disciplinaryLetter", label: "By letter type (Production only): { nonWorker, worker } per type", type: "map" }
-  ]
-});
+// Disciplinary Action is NOT part of the monthly report cycle — it's a single
+// summary record per plant, covering whatever period the admin sets (e.g.
+// "July 2025 to June 2026"), overwritten in place rather than saved per month.
+// It lives at sites/{siteId}/meta/disciplinary — see admin.js / disciplinary.js.
+export const DISCIPLINARY_META = { title: "Disciplinary Action", icon: "scale" };
 
 export function enabledTopics() {
   return TOPICS.filter(t => t.enabled);

@@ -1,5 +1,6 @@
-import { DEPARTMENTS } from "./schema.js";
-import { periodYear, pickDefaultPeriod, escapeHtml, loadSitesList, fetchSiteReportsMap } from "./dashboard-shared.js";
+import { departmentsForSite } from "./schema.js";
+import { db, periodYear, pickDefaultPeriod, escapeHtml, loadSitesList, fetchSiteReportsMap } from "./dashboard-shared.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const siteSelect = document.getElementById("siteSelect");
 const periodSelect = document.getElementById("periodSelect");
@@ -37,6 +38,7 @@ async function loadSites() {
   siteSelect.value = currentSiteId;
 
   await loadReportsForSite(currentSiteId, params.get("period"));
+  await loadDisciplinarySummary(currentSiteId);
 }
 
 async function loadReportsForSite(siteId, wantedPeriod) {
@@ -162,10 +164,27 @@ function render(siteId, periodId) {
   document.getElementById("feedbackYtdTotal").textContent = ytdFeedbackTotal.toLocaleString();
   document.getElementById("feedbackBigNum").textContent = feedbackTotal.toLocaleString();
 
-  // ── Disciplinary Action — lightweight summary + link to its own page ─
-  const deptData = current.disciplinaryDept || {};
+  syncUrl(siteId, periodId);
+}
+
+// ── Disciplinary Action — lightweight summary + link to its own page ──
+// Not part of the monthly report cycle, so this loads once per site (not per period).
+async function loadDisciplinarySummary(siteId) {
+  const siteName = sites.find(s => s.id === siteId)?.name || "";
+  disciplinaryLink.href = `disciplinary.html?site=${encodeURIComponent(siteId)}`;
+
+  let data = {};
+  try {
+    const snap = await getDoc(doc(db, "sites", siteId, "meta", "disciplinary"));
+    if (snap.exists()) data = snap.data();
+  } catch (err) {
+    console.error(err);
+  }
+
+  const deptData = data.disciplinaryDept || {};
+  const departments = departmentsForSite(siteName);
   let grandActions = 0, grandEmployees = 0;
-  DEPARTMENTS.forEach(d => {
+  departments.forEach(d => {
     const v = deptData[d.key] || {};
     grandActions += (Number(v.worker) || 0) + (Number(v.nonWorker) || 0);
     grandEmployees += Number(v.employees) || 0;
@@ -174,9 +193,7 @@ function render(siteId, periodId) {
 
   document.getElementById("discGrandActions").textContent = grandActions.toLocaleString();
   document.getElementById("discGrandPct").textContent = `${grandPct}%`;
-  disciplinaryLink.href = `disciplinary.html?site=${encodeURIComponent(siteId)}&period=${encodeURIComponent(periodId)}`;
-
-  syncUrl(siteId, periodId);
+  document.getElementById("discPeriodLabel").textContent = data.periodLabel || "No summary period set yet";
 }
 
 function setBar(barId, labelId, pct) {
@@ -342,6 +359,7 @@ function syncUrl(siteId, periodId) {
 siteSelect.addEventListener("change", async () => {
   currentSiteId = siteSelect.value;
   await loadReportsForSite(currentSiteId);
+  await loadDisciplinarySummary(currentSiteId);
 });
 
 periodSelect.addEventListener("change", () => {

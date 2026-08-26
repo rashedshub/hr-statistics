@@ -16,10 +16,6 @@
 <div class="hs-topbar">
   <h1 class="hs-title"><a href="index.html" style="color:inherit;text-decoration:none;">HR Statistics</a></h1>
 
-  <div class="hs-topbar-item">
-    Period <select id="periodSelect"></select>
-  </div>
-
   <div class="hs-topbar-item hs-topbar-right">
     Plant <select id="siteSelect"></select>
     <a class="hs-admin-link" href="index.html" title="Back to dashboard"><i data-lucide="arrow-left"></i></a>
@@ -32,7 +28,7 @@
 
   <div id="discPageWrap" style="display:none;">
     <h2 class="disc-page-title">Disciplinary Action</h2>
-    <p class="disc-page-subtitle">Cumulative year-to-date figures as of the selected month.</p>
+    <p class="disc-page-subtitle" id="discPeriodSubtitle">No summary period set yet.</p>
 
     <div class="disc-summary-row">
       <div class="disc-summary-stat"><span>Worker (YTD)</span><b class="tabular" id="discGrandWorker">–</b></div>

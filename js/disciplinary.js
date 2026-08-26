@@ -1,17 +1,17 @@
-import { DEPARTMENTS, LETTER_TYPES } from "./schema.js";
-import { pickDefaultPeriod, escapeHtml, loadSitesList, fetchSiteReportsMap } from "./dashboard-shared.js";
+import { departmentsForSite, LETTER_TYPES } from "./schema.js";
+import { db, escapeHtml, loadSitesList } from "./dashboard-shared.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const siteSelect = document.getElementById("siteSelect");
-const periodSelect = document.getElementById("periodSelect");
 const stateMsg = document.getElementById("stateMsg");
 const discPageWrap = document.getElementById("discPageWrap");
+const discPeriodSubtitle = document.getElementById("discPeriodSubtitle");
 
 let sites = [];
 let currentSiteId = null;
-let reportsById = {};
 
 // Standard modern categorical palette — used consistently across every chart on this page.
-const PALETTE = ["#2563EB", "#0EA5A5", "#F59E0B", "#8B5CF6", "#EC4899", "#10B981", "#64748B"];
+const PALETTE = ["#2563EB", "#0EA5A5", "#F59E0B", "#8B5CF6", "#EC4899", "#10B981", "#64748B", "#F97316"];
 
 function setState(msg) {
   if (msg) {
@@ -28,7 +28,7 @@ async function loadSites() {
   sites = await loadSitesList();
 
   if (sites.length === 0) {
-    setState("No plants yet. Go to Admin to add your first plant and monthly report.");
+    setState("No plants yet. Go to Admin to add your first plant.");
     return;
   }
 
@@ -38,38 +38,39 @@ async function loadSites() {
   currentSiteId = sites.some(s => s.id === wanted) ? wanted : sites[0].id;
   siteSelect.value = currentSiteId;
 
-  await loadReportsForSite(currentSiteId, params.get("period"));
+  await loadAndRender(currentSiteId);
 }
 
-async function loadReportsForSite(siteId, wantedPeriod) {
+async function loadAndRender(siteId) {
   setState("Loading…");
-  reportsById = await fetchSiteReportsMap(siteId);
 
-  const periods = Object.keys(reportsById).sort((a, b) => b.localeCompare(a));
-
-  if (periods.length === 0) {
-    periodSelect.innerHTML = "";
-    setState("No monthly reports yet for this plant. Add one from Admin.");
+  const siteName = sites.find(s => s.id === siteId)?.name || "";
+  let data = {};
+  try {
+    const snap = await getDoc(doc(db, "sites", siteId, "meta", "disciplinary"));
+    if (snap.exists()) data = snap.data();
+  } catch (err) {
+    console.error(err);
+    setState("Could not load data. Check the Firebase config and your Firestore security rules.");
     return;
   }
 
-  periodSelect.innerHTML = periods.map(p =>
-    `<option value="${p}">${escapeHtml(reportsById[p].period || p)}</option>`
-  ).join("");
-  const chosenPeriod = pickDefaultPeriod(periods, wantedPeriod);
-  periodSelect.value = chosenPeriod;
-
-  render(siteId, chosenPeriod);
+  render(siteName, data);
+  syncUrl(siteId);
   setState(null);
 }
 
-function render(siteId, periodId) {
-  const current = reportsById[periodId] || {};
-  const deptData = current.disciplinaryDept || {};
-  const letterData = current.disciplinaryLetter || {};
+function render(siteName, data) {
+  const departments = departmentsForSite(siteName);
+  const deptData = data.disciplinaryDept || {};
+  const letterData = data.disciplinaryLetter || {};
+
+  discPeriodSubtitle.textContent = data.periodLabel
+    ? `Summary period: ${data.periodLabel}`
+    : "No summary period set yet — add one from Admin.";
 
   let grandWorker = 0, grandNonWorker = 0, grandEmployees = 0;
-  DEPARTMENTS.forEach(d => {
+  departments.forEach(d => {
     const v = deptData[d.key] || {};
     grandWorker += Number(v.worker) || 0;
     grandNonWorker += Number(v.nonWorker) || 0;
@@ -90,13 +91,12 @@ function render(siteId, periodId) {
   document.getElementById("discProductionActions").textContent = prodActions.toLocaleString();
   document.getElementById("discProductionPct").textContent = `${prodPct}%`;
 
-  drawDeptTable(deptData);
-  drawCharts(deptData, letterData);
-  syncUrl(siteId, periodId);
+  drawDeptTable(departments, deptData);
+  drawCharts(departments, deptData, letterData);
 }
 
-function drawDeptTable(deptData) {
-  const rows = DEPARTMENTS.map(d => {
+function drawDeptTable(departments, deptData) {
+  const rows = departments.map(d => {
     const v = deptData[d.key] || {};
     const worker = Number(v.worker) || 0;
     const nonWorker = Number(v.nonWorker) || 0;
@@ -141,13 +141,13 @@ function destroyChart(key) {
   if (charts[key]) { charts[key].destroy(); delete charts[key]; }
 }
 
-function drawCharts(deptData, letterData) {
-  const deptLabels = DEPARTMENTS.map(d => d.name);
-  const deptActions = DEPARTMENTS.map(d => {
+function drawCharts(departments, deptData, letterData) {
+  const deptLabels = departments.map(d => d.name);
+  const deptActions = departments.map(d => {
     const v = deptData[d.key] || {};
     return (Number(v.worker) || 0) + (Number(v.nonWorker) || 0);
   });
-  const deptRates = DEPARTMENTS.map(d => {
+  const deptRates = departments.map(d => {
     const v = deptData[d.key] || {};
     const total = (Number(v.worker) || 0) + (Number(v.nonWorker) || 0);
     const emp = Number(v.employees) || 0;
@@ -241,20 +241,15 @@ function drawCharts(deptData, letterData) {
   });
 }
 
-function syncUrl(siteId, periodId) {
+function syncUrl(siteId) {
   const params = new URLSearchParams();
   params.set("site", siteId);
-  params.set("period", periodId);
   history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
 }
 
 siteSelect.addEventListener("change", async () => {
   currentSiteId = siteSelect.value;
-  await loadReportsForSite(currentSiteId);
-});
-
-periodSelect.addEventListener("change", () => {
-  render(currentSiteId, periodSelect.value);
+  await loadAndRender(currentSiteId);
 });
 
 setState("Loading…");

@@ -42,6 +42,13 @@ service cloud.firestore {
         allow read: if true;
         allow write: if canManageSite(siteId);
       }
+
+      // Single-document records that aren't part of the monthly report cycle
+      // (e.g. sites/{siteId}/meta/disciplinary). Same access as report data.
+      match /meta/{docId} {
+        allow read: if true;
+        allow write: if canManageSite(siteId);
+      }
     }
   }
 }
