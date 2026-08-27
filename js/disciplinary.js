@@ -95,6 +95,7 @@ function render(siteName, data) {
   document.getElementById("discProductionPct").textContent = `${prodPct}%`;
 
   drawDeptTable(departments, deptData);
+  drawLetterTable(letterData);
   drawCharts(departments, deptData, letterData);
 }
 
@@ -134,6 +135,35 @@ function drawDeptTable(departments, deptData) {
     </tr>`;
 
   document.getElementById("discDeptTableBody").innerHTML = body + footer;
+}
+
+function drawLetterTable(letterData) {
+  const rows = LETTER_TYPES.map(t => {
+    const v = letterData[t.key] || {};
+    const nonWorker = Number(v.nonWorker) || 0;
+    const worker = Number(v.worker) || 0;
+    return { name: t.name, nonWorker, worker, total: nonWorker + worker };
+  });
+  const grand = rows.reduce((acc, r) => ({
+    nonWorker: acc.nonWorker + r.nonWorker, worker: acc.worker + r.worker, total: acc.total + r.total
+  }), { nonWorker: 0, worker: 0, total: 0 });
+
+  const body = rows.map(r => `
+    <tr>
+      <td>${escapeHtml(r.name)}</td>
+      <td>${r.nonWorker.toLocaleString()}</td>
+      <td>${r.worker.toLocaleString()}</td>
+      <td>${r.total.toLocaleString()}</td>
+    </tr>`).join("");
+  const footer = `
+    <tr style="font-weight:700;border-top:2px solid var(--line);">
+      <td>Grand Total</td>
+      <td>${grand.nonWorker.toLocaleString()}</td>
+      <td>${grand.worker.toLocaleString()}</td>
+      <td>${grand.total.toLocaleString()}</td>
+    </tr>`;
+
+  document.getElementById("discLetterTableBody").innerHTML = body + footer;
 }
 
 // ── Charts ──────────────────────────────────────────────────
