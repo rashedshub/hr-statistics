@@ -146,7 +146,12 @@ export const LETTER_TYPES = [
   { key: "strongWarning", name: "Strong Warning" },
   { key: "warningLetter", name: "Warning Letter" },
   { key: "cautionary", name: "Cautionary" },
-  { key: "verbalWarning", name: "Verbal Warning" }
+  { key: "verbalWarning", name: "Verbal Warning" },
+  { key: "advisoryNote", name: "Advisory Note" },
+  { key: "advisoryNote1", name: "Advisory Note -1" },
+  { key: "advisoryNote2", name: "Advisory Note -2" },
+  { key: "advisoryNote3", name: "Advisory Note -3" },
+  { key: "sternWarningLetter", name: "Stern Warning Letter" }
 ];
 
 // Disciplinary Action is NOT part of the monthly report cycle — it's a single

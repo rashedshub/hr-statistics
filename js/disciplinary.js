@@ -11,7 +11,10 @@ let sites = [];
 let currentSiteId = null;
 
 // Standard modern categorical palette — used consistently across every chart on this page.
-const PALETTE = ["#2563EB", "#0EA5A5", "#F59E0B", "#8B5CF6", "#EC4899", "#10B981", "#64748B", "#F97316"];
+const PALETTE = [
+  "#2563EB", "#0EA5A5", "#F59E0B", "#8B5CF6", "#EC4899", "#10B981", "#64748B", "#F97316",
+  "#DC2626", "#0891B2", "#7C3AED", "#65A30D", "#DB2777", "#4B5563"
+];
 
 function setState(msg) {
   if (msg) {
