@@ -34,7 +34,8 @@ async function loadSites() {
   siteSelect.innerHTML = sites.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
   const params = new URLSearchParams(location.search);
   const wanted = params.get("site");
-  currentSiteId = sites.some(s => s.id === wanted) ? wanted : sites[0].id;
+  const defaultSite = sites.find(s => s.name === "YHT");
+  currentSiteId = sites.some(s => s.id === wanted) ? wanted : (defaultSite ? defaultSite.id : sites[0].id);
   siteSelect.value = currentSiteId;
 
   await loadReportsForSite(currentSiteId, params.get("period"));
@@ -302,6 +303,76 @@ leavePanel.addEventListener("click", () => {
     datasets: [
       { key: "monthElPlan", label: "Plan", color: "#a9c4e8" },
       { key: "monthElActual", label: "Actual", color: "#3b6fae" }
+    ],
+    chartType: "bar"
+  });
+});
+
+// ── Sick Leave detail ────────────────────────────────────────
+const sickPanel = document.getElementById("sickPanel");
+sickPanel.addEventListener("click", () => {
+  const { year, rows } = buildMonthRows(periodSelect.value, ["monthSickDays", "monthSickEmployees", "monthHeadcount"]);
+  rows.forEach(r => { r.pct = r.monthHeadcount > 0 ? Math.round((r.monthSickEmployees / r.monthHeadcount) * 1000) / 10 : 0; });
+  const siteName = sites.find(s => s.id === currentSiteId)?.name || "";
+  openDetailModal({
+    title: `Sick Leave — ${siteName}${year ? " " + year : ""}`,
+    rows,
+    columns: [
+      { key: "monthSickDays", label: "Sick Days" },
+      { key: "monthSickEmployees", label: "Employees" },
+      { key: "monthHeadcount", label: "Headcount" },
+      { key: "pct", label: "%", format: r => r.pct + "%" }
+    ],
+    datasets: [
+      { key: "monthSickDays", label: "Sick Days", color: "#DB9A2C" }
+    ],
+    chartType: "bar"
+  });
+});
+
+// ── Present % detail ─────────────────────────────────────────
+const presentPanel = document.getElementById("presentPanel");
+presentPanel.addEventListener("click", () => {
+  const { year, rows } = buildMonthRows(periodSelect.value, [
+    "presentTotalEmployees", "presentTotalPresent", "presentSewingTotal", "presentSewingPresent"
+  ]);
+  rows.forEach(r => {
+    r.overallPct = r.presentTotalEmployees > 0 ? Math.round((r.presentTotalPresent / r.presentTotalEmployees) * 1000) / 10 : 0;
+    r.sewingPct = r.presentSewingTotal > 0 ? Math.round((r.presentSewingPresent / r.presentSewingTotal) * 1000) / 10 : 0;
+  });
+  const siteName = sites.find(s => s.id === currentSiteId)?.name || "";
+  openDetailModal({
+    title: `Present % — ${siteName}${year ? " " + year : ""}`,
+    rows,
+    columns: [
+      { key: "overallPct", label: "Overall %", format: r => r.overallPct + "%" },
+      { key: "sewingPct", label: "Sewing %", format: r => r.sewingPct + "%" },
+      { key: "presentTotalEmployees", label: "Total Employees" },
+      { key: "presentSewingTotal", label: "Sewing Headcount" }
+    ],
+    datasets: [
+      { key: "overallPct", label: "Overall %", color: "#16A34A" },
+      { key: "sewingPct", label: "Sewing %", color: "#86EFAC" }
+    ],
+    chartType: "line"
+  });
+});
+
+// ── Injuries detail ──────────────────────────────────────────
+const injuriesPanel = document.getElementById("injuriesPanel");
+injuriesPanel.addEventListener("click", () => {
+  const { year, rows } = buildMonthRows(periodSelect.value, ["injuriesTotal", "injuriesCritical"]);
+  const siteName = sites.find(s => s.id === currentSiteId)?.name || "";
+  openDetailModal({
+    title: `Injuries — ${siteName}${year ? " " + year : ""}`,
+    rows,
+    columns: [
+      { key: "injuriesTotal", label: "Total" },
+      { key: "injuriesCritical", label: "Critical" }
+    ],
+    datasets: [
+      { key: "injuriesTotal", label: "Total", color: "#E11D48" },
+      { key: "injuriesCritical", label: "Critical", color: "#7F1D1D" }
     ],
     chartType: "bar"
   });
