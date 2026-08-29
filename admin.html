@@ -25,6 +25,22 @@
 
   <div class="role-banner" id="roleBanner"></div>
 
+  <div class="admin-layout">
+    <nav class="admin-nav" id="adminNav">
+      <button class="admin-nav-item" data-target="plantsPanel"><i data-lucide="factory"></i><span>Plants</span></button>
+      <button class="admin-nav-item" data-target="manageAdminsPanel"><i data-lucide="shield-check"></i><span>Manage Admins</span></button>
+      <button class="admin-nav-item" data-target="panelLeave"><i data-lucide="calendar-clock"></i><span>Leave Consumption</span></button>
+      <button class="admin-nav-item" data-target="panelManpower"><i data-lucide="users"></i><span>Total Manpower</span></button>
+      <button class="admin-nav-item" data-target="panelFeedback"><i data-lucide="message-circle"></i><span>Feedback Received</span></button>
+      <button class="admin-nav-item" data-target="panelPresent"><i data-lucide="user-round-check"></i><span>Present %</span></button>
+      <button class="admin-nav-item" data-target="panelInjuries"><i data-lucide="user-round-x"></i><span>Injuries</span></button>
+      <button class="admin-nav-item" data-target="panelDisciplinary"><i data-lucide="scale"></i><span>Disciplinary Action</span></button>
+      <button class="admin-nav-item" data-target="panelOther"><i data-lucide="layout-grid"></i><span>Other Topics</span></button>
+      <button class="admin-nav-item" data-target="panelReports"><i data-lucide="list"></i><span>Existing Reports</span></button>
+    </nav>
+
+    <div class="admin-content">
+
   <div class="admin-panel" id="plantsPanel">
     <h2 style="margin-top:0;">Plants</h2>
     <div class="form-grid" style="margin-bottom:14px;">
@@ -74,7 +90,7 @@
     <ul class="reports-list" id="adminsList" style="margin-top:18px;"></ul>
   </div>
 
-  <div class="admin-panel">
+  <div class="admin-panel" id="panelLeave">
     <h2 style="margin-top:0;">Leave Consumption — yearly entry</h2>
     <p class="hint" style="margin-top:-6px;margin-bottom:14px;">
       Total EL (Plan) applies for the whole year. Fill in each month's Plan and Actual below, then save once —
@@ -108,7 +124,7 @@
     </div>
   </div>
 
-  <div class="admin-panel">
+  <div class="admin-panel" id="panelManpower">
     <h2 style="margin-top:0;">Total Manpower — yearly entry</h2>
     <p class="hint" style="margin-top:-6px;margin-bottom:14px;">
       Enter each month's closing (month-end) headcount — no need to type month or year.
@@ -136,7 +152,7 @@
     </div>
   </div>
 
-  <div class="admin-panel">
+  <div class="admin-panel" id="panelFeedback">
     <h2 style="margin-top:0;">Employees Feedback Received — yearly entry</h2>
     <p class="hint" style="margin-top:-6px;margin-bottom:14px;">
       Enter each month's External and Internal channel counts — Total is calculated automatically.
@@ -164,7 +180,7 @@
     </div>
   </div>
 
-  <div class="admin-panel">
+  <div class="admin-panel" id="panelPresent">
     <h2 style="margin-top:0;">Present % — yearly entry</h2>
     <p class="hint" style="margin-top:-6px;margin-bottom:14px;">
       Enter each month's headcount and present count — overall for everyone, plus a separate figure for Sewing (Operator) workers. Percentages are calculated automatically.
@@ -200,7 +216,7 @@
     </div>
   </div>
 
-  <div class="admin-panel">
+  <div class="admin-panel" id="panelInjuries">
     <h2 style="margin-top:0;">Injuries — yearly entry</h2>
     <p class="hint" style="margin-top:-6px;margin-bottom:14px;">
       Enter each month's injury count and how many of those were critical.
@@ -228,7 +244,7 @@
     </div>
   </div>
 
-  <div class="admin-panel">
+  <div class="admin-panel" id="panelDisciplinary">
     <h2 style="margin-top:0;">Disciplinary Action — summary period</h2>
     <p class="hint" style="margin-top:-6px;margin-bottom:14px;">
       This is <b>one summary record per plant</b>, not a monthly entry — it covers whatever period you set below
@@ -301,7 +317,7 @@
     </div>
   </div>
 
-  <div class="admin-panel">
+  <div class="admin-panel" id="panelOther">
     <h2 style="margin-top:0;">Monthly report — other topics</h2>
     <div class="form-grid">
       <div class="field">
@@ -326,13 +342,16 @@
     </div>
   </div>
 
-  <div class="admin-panel">
+  <div class="admin-panel" id="panelReports">
     <h2 style="margin-top:0;">Existing reports</h2>
     <div class="field" style="max-width:260px;margin-bottom:10px;">
       <label>Filter by plant</label>
       <select id="reportsSiteFilter"></select>
     </div>
     <ul class="reports-list" id="reportsList"></ul>
+  </div>
+
+    </div>
   </div>
 
 </div>

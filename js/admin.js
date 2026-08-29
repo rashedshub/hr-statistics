@@ -25,6 +25,28 @@ const roleBanner = document.getElementById("roleBanner");
 const plantsPanel = document.getElementById("plantsPanel");
 const manageAdminsPanel = document.getElementById("manageAdminsPanel");
 
+// ── Category sidebar nav (click a category, only its panel shows) ─
+const adminNavItems = document.querySelectorAll(".admin-nav-item");
+const SUPER_ONLY_NAV_TARGETS = ["plantsPanel", "manageAdminsPanel"];
+
+function setupAdminNav() {
+  adminNavItems.forEach(btn => {
+    const target = btn.dataset.target;
+    const restricted = SUPER_ONLY_NAV_TARGETS.includes(target) && currentAdminRole !== "super";
+    btn.style.display = restricted ? "none" : "";
+    btn.addEventListener("click", () => showAdminPanel(target));
+  });
+
+  const firstVisible = [...adminNavItems].find(btn => btn.style.display !== "none");
+  if (firstVisible) showAdminPanel(firstVisible.dataset.target);
+}
+
+function showAdminPanel(targetId) {
+  document.querySelectorAll(".admin-content .admin-panel").forEach(p => p.classList.remove("panel-active"));
+  document.getElementById(targetId)?.classList.add("panel-active");
+  adminNavItems.forEach(b => b.classList.toggle("active", b.dataset.target === targetId));
+}
+
 const sitesList = document.getElementById("sitesList");
 const newSiteName = document.getElementById("newSiteName");
 const addSiteBtn = document.getElementById("addSiteBtn");
@@ -109,8 +131,7 @@ onAuthStateChanged(auth, async (user) => {
 
   checkingMsg.style.display = "none";
   adminShell.style.display = "block";
-  plantsPanel.style.display = currentAdminRole === "super" ? "" : "none";
-  manageAdminsPanel.style.display = currentAdminRole === "super" ? "" : "none";
+  setupAdminNav();
 
   await refreshSites();
 });
