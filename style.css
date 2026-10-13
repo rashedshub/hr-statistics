@@ -20,6 +20,8 @@
   --cyan:#2E8FA3;       /* Disciplinary Action accent */
   --emerald:#16A34A;    /* Present % accent */
   --rose:#E11D48;       /* Injuries accent */
+  --indigo:#4F46E5;     /* Direct Manpower accent */
+  --orange:#EA580C;     /* Manpower Excess/(Shortage) accent */
   --positive:#1FA971;
   --negative:#D8514F;
   --negative-tint:#FBEAEA;
@@ -147,6 +149,8 @@ body{
 .stat-panel.clickable-panel:focus-visible{outline:2px solid var(--accent, var(--brand));outline-offset:2px;}
 
 #manpowerPanel{--accent:var(--brand);}
+#directPanel{--accent:var(--indigo);}
+#shortagePanel{--accent:var(--orange);}
 #leavePanel{--accent:var(--teal);}
 #sickPanel{--accent:var(--amber);}
 #feedbackPanel{--accent:var(--violet);}
@@ -183,6 +187,8 @@ body{
 .card-chevron svg{width:16px;height:16px;}
 
 /* Hero figure */
+.hero-figure.negative{color:var(--negative);}
+.mini-stat b.negative{color:var(--negative);}
 .hero-figure{
   font-family:var(--font-display);
   font-weight:700;

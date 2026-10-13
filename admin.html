@@ -31,6 +31,8 @@
       <button class="admin-nav-item" data-target="manageAdminsPanel"><i data-lucide="shield-check"></i><span>Manage Admins</span></button>
       <button class="admin-nav-item" data-target="panelLeave"><i data-lucide="calendar-clock"></i><span>Leave Consumption</span></button>
       <button class="admin-nav-item" data-target="panelManpower"><i data-lucide="users"></i><span>Total Manpower</span></button>
+      <button class="admin-nav-item" data-target="panelDirectManpower"><i data-lucide="user-check"></i><span>Direct Manpower</span></button>
+      <button class="admin-nav-item" data-target="panelShortage"><i data-lucide="shield-alert"></i><span>Excess / (Shortage)</span></button>
       <button class="admin-nav-item" data-target="panelFeedback"><i data-lucide="message-circle"></i><span>Feedback Received</span></button>
       <button class="admin-nav-item" data-target="panelPresent"><i data-lucide="user-round-check"></i><span>Present %</span></button>
       <button class="admin-nav-item" data-target="panelInjuries"><i data-lucide="user-round-x"></i><span>Injuries</span></button>
@@ -149,6 +151,65 @@
 
     <div style="margin-top:16px;">
       <button class="btn primary" id="saveManpowerYearBtn"><i data-lucide="save"></i> Save Total Manpower (whole year)</button>
+    </div>
+  </div>
+
+  <div class="admin-panel" id="panelDirectManpower">
+    <h2 style="margin-top:0;">Direct Manpower — yearly entry</h2>
+    <p class="hint" style="margin-top:-6px;margin-bottom:14px;">
+      Enter each month's direct manpower headcount. Total Manpower is read from what you saved under
+      <b>Total Manpower</b>, and Direct % is calculated automatically (Direct &divide; Total &times; 100).
+    </p>
+    <div class="form-grid">
+      <div class="field">
+        <label>Plant</label>
+        <select id="directSite"></select>
+      </div>
+      <div class="field">
+        <label>Year</label>
+        <select id="directYear"></select>
+      </div>
+    </div>
+
+    <table class="month-table" id="directMonthTable">
+      <thead>
+        <tr><th>Month</th><th>Direct Manpower</th><th>Total Manpower (saved)</th><th>Direct % (auto)</th></tr>
+      </thead>
+      <tbody><!-- 12 rows injected by admin.js --></tbody>
+    </table>
+
+    <div style="margin-top:16px;">
+      <button class="btn primary" id="saveDirectYearBtn"><i data-lucide="save"></i> Save Direct Manpower (whole year)</button>
+    </div>
+  </div>
+
+  <div class="admin-panel" id="panelShortage">
+    <h2 style="margin-top:0;">Manpower Excess / (Shortage) — yearly entry</h2>
+    <p class="hint" style="margin-top:-6px;margin-bottom:14px;">
+      Enter each month's required (budgeted) manpower. Actual manpower is read from what you saved under
+      <b>Total Manpower</b>, and Excess/(Shortage) is calculated automatically (Actual &minus; Required).
+      A negative number is a shortage.
+    </p>
+    <div class="form-grid">
+      <div class="field">
+        <label>Plant</label>
+        <select id="shortageSite"></select>
+      </div>
+      <div class="field">
+        <label>Year</label>
+        <select id="shortageYear"></select>
+      </div>
+    </div>
+
+    <table class="month-table" id="shortageMonthTable">
+      <thead>
+        <tr><th>Month</th><th>Required Manpower</th><th>Actual Manpower (saved)</th><th>Excess / (Shortage) (auto)</th></tr>
+      </thead>
+      <tbody><!-- 12 rows injected by admin.js --></tbody>
+    </table>
+
+    <div style="margin-top:16px;">
+      <button class="btn primary" id="saveShortageYearBtn"><i data-lucide="save"></i> Save Required Manpower (whole year)</button>
     </div>
   </div>
 

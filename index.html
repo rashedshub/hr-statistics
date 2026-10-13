@@ -51,6 +51,48 @@
       </div>
     </div>
 
+    <!-- Direct Manpower -->
+    <div class="stat-panel clickable-panel" id="directPanel" tabindex="0" title="Click for month-by-month detail">
+      <div class="stat-panel-header">
+        <span class="card-icon-badge"><i data-lucide="user-check"></i></span>
+        <span class="card-eyebrow">Direct Manpower</span>
+        <span class="card-chevron"><i data-lucide="chevron-right"></i></span>
+      </div>
+
+      <div class="hero-figure tabular" id="directBigPct">–</div>
+      <div class="hero-label">Direct share of total manpower, this month</div>
+
+      <div class="progress-track" style="margin-top:12px;"><div class="progress-fill" id="directBar" style="width:0%;"></div></div>
+
+      <div class="stat-divider"></div>
+
+      <div class="stat-grid-2">
+        <div class="mini-stat"><span>Direct manpower</span><b class="tabular" id="directCount">–</b></div>
+        <div class="mini-stat"><span>Total manpower</span><b class="tabular" id="directTotal">–</b></div>
+        <div class="mini-stat" style="grid-column:1/-1;"><span>YTD average %</span><b class="tabular" id="directYtdAvg">–</b></div>
+      </div>
+    </div>
+
+    <!-- Manpower Excess / (Shortage) -->
+    <div class="stat-panel clickable-panel" id="shortagePanel" tabindex="0" title="Click for month-by-month detail">
+      <div class="stat-panel-header">
+        <span class="card-icon-badge"><i data-lucide="shield-alert"></i></span>
+        <span class="card-eyebrow">Manpower Excess / (Shortage)</span>
+        <span class="card-chevron"><i data-lucide="chevron-right"></i></span>
+      </div>
+
+      <div class="hero-figure tabular" id="shortageBigNum">–</div>
+      <div class="hero-label" id="shortageLabel">Actual minus required, this month</div>
+
+      <div class="stat-divider"></div>
+
+      <div class="stat-grid-2">
+        <div class="mini-stat"><span>Required manpower</span><b class="tabular" id="shortageRequired">–</b></div>
+        <div class="mini-stat"><span>Actual manpower</span><b class="tabular" id="shortageActual">–</b></div>
+        <div class="mini-stat" style="grid-column:1/-1;"><span>YTD average</span><b class="tabular" id="shortageYtdAvg">–</b></div>
+      </div>
+    </div>
+
     <!-- Leave Consumption -->
     <div class="stat-panel clickable-panel" id="leavePanel" tabindex="0" title="Click for month-by-month detail">
       <div class="stat-panel-header">
