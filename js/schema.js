@@ -94,9 +94,28 @@ export const TOPICS = [
     ]
   },
 
+  {
+    id: "directManpower",
+    title: "Direct Manpower",
+    icon: "user-check",
+    enabled: true,
+    customAdminUI: true, // own yearly table in admin.js. % = directManpower / closingManpower (from Total Manpower)
+    fields: [
+      { key: "directManpower", label: "Direct manpower (headcount)", type: "number" }
+    ]
+  },
+  {
+    id: "manpowerShortage",
+    title: "Manpower excess/(shortage)",
+    icon: "shield-alert",
+    enabled: true,
+    customAdminUI: true, // own yearly table in admin.js. excess/(shortage) = closingManpower - requiredManpower
+    fields: [
+      { key: "requiredManpower", label: "Required manpower (budgeted headcount)", type: "number" }
+    ]
+  },
+
   // ── Not built yet — next topics to add, one at a time ──────
-  { id: "directManpower", title: "Direct Manpower", icon: "user-check", enabled: false, fields: [] },
-  { id: "manpowerShortage", title: "Manpower excess/(shortage)", icon: "shield-alert", enabled: false, fields: [] },
   { id: "training", title: "Training", icon: "presentation", enabled: false, fields: [] },
   { id: "turnover", title: "Employee Turnover", icon: "refresh-cw", enabled: false, fields: [] },
   { id: "attendance", title: "Attendance through manual adjustment", icon: "pencil-line", enabled: false, fields: [] },

@@ -45,6 +45,8 @@ function showAdminPanel(targetId) {
   document.querySelectorAll(".admin-content .admin-panel").forEach(p => p.classList.remove("panel-active"));
   document.getElementById(targetId)?.classList.add("panel-active");
   adminNavItems.forEach(b => b.classList.toggle("active", b.dataset.target === targetId));
+  if (targetId === "panelDirectManpower") refreshDirectTotals();
+  if (targetId === "panelShortage") refreshShortageActuals();
 }
 
 const sitesList = document.getElementById("sitesList");
@@ -79,6 +81,16 @@ const presentSite = document.getElementById("presentSite");
 const presentYear = document.getElementById("presentYear");
 const presentMonthTableBody = document.querySelector("#presentMonthTable tbody");
 const savePresentYearBtn = document.getElementById("savePresentYearBtn");
+
+const directSite = document.getElementById("directSite");
+const directYear = document.getElementById("directYear");
+const directMonthTableBody = document.querySelector("#directMonthTable tbody");
+const saveDirectYearBtn = document.getElementById("saveDirectYearBtn");
+
+const shortageSite = document.getElementById("shortageSite");
+const shortageYear = document.getElementById("shortageYear");
+const shortageMonthTableBody = document.querySelector("#shortageMonthTable tbody");
+const saveShortageYearBtn = document.getElementById("saveShortageYearBtn");
 
 const injuriesSite = document.getElementById("injuriesSite");
 const injuriesYear = document.getElementById("injuriesYear");
@@ -153,6 +165,10 @@ presentYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).joi
 presentYear.value = CURRENT_YEAR;
 injuriesYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).join("");
 injuriesYear.value = CURRENT_YEAR;
+directYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).join("");
+directYear.value = CURRENT_YEAR;
+shortageYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).join("");
+shortageYear.value = CURRENT_YEAR;
 const monthOptionsHtml = MONTHS.map(m => `<option value="${m.num}">${m.name}</option>`).join("");
 disciplinaryStartMonth.innerHTML = monthOptionsHtml;
 disciplinaryStartMonth.value = "07"; // default: July, since that's the common fiscal-year start
@@ -245,6 +261,61 @@ function updatePresentRowPct(num) {
 
   document.getElementById(`presentOverallPct_${num}`).textContent = `${overallPct}%`;
   document.getElementById(`presentSewingPct_${num}`).textContent = `${sewingPct}%`;
+}
+
+// ── Direct Manpower — yearly table ───────────────────────────
+// Total Manpower per month comes from the saved Total Manpower entry (closingManpower),
+// kept in rowTotals so the Direct % column can recalculate live as the admin types.
+let directRowTotals = {};
+
+directMonthTableBody.innerHTML = MONTHS.map(m => `
+  <tr>
+    <td>${m.name}</td>
+    <td><input type="number" step="any" id="directManpower_${m.num}"></td>
+    <td><span class="row-total" id="directTotal_${m.num}">–</span></td>
+    <td><span class="row-total" id="directPct_${m.num}">–</span></td>
+  </tr>`).join("");
+
+MONTHS.forEach(m => {
+  document.getElementById(`directManpower_${m.num}`).addEventListener("input", () => updateDirectRow(m.num));
+});
+
+function updateDirectRow(num) {
+  const direct = Number(document.getElementById(`directManpower_${num}`).value) || 0;
+  const total = directRowTotals[num] || 0;
+  document.getElementById(`directTotal_${num}`).textContent = total > 0 ? total.toLocaleString() : "–";
+  const pct = total > 0 ? Math.round((direct / total) * 1000) / 10 : null;
+  document.getElementById(`directPct_${num}`).textContent = pct === null ? "–" : `${pct}%`;
+}
+
+// ── Manpower Excess/(Shortage) — yearly table ────────────────
+let shortageRowActuals = {};
+
+shortageMonthTableBody.innerHTML = MONTHS.map(m => `
+  <tr>
+    <td>${m.name}</td>
+    <td><input type="number" step="any" id="shortageRequired_${m.num}"></td>
+    <td><span class="row-total" id="shortageActual_${m.num}">–</span></td>
+    <td><span class="row-total" id="shortageResult_${m.num}">–</span></td>
+  </tr>`).join("");
+
+MONTHS.forEach(m => {
+  document.getElementById(`shortageRequired_${m.num}`).addEventListener("input", () => updateShortageRow(m.num));
+});
+
+function updateShortageRow(num) {
+  const required = Number(document.getElementById(`shortageRequired_${num}`).value) || 0;
+  const actual = shortageRowActuals[num] || 0;
+  document.getElementById(`shortageActual_${num}`).textContent = actual > 0 ? actual.toLocaleString() : "–";
+  const resultEl = document.getElementById(`shortageResult_${num}`);
+  if (required > 0 && actual > 0) {
+    const diff = actual - required;
+    resultEl.textContent = diff > 0 ? `+${diff.toLocaleString()}` : diff.toLocaleString();
+    resultEl.style.color = diff < 0 ? "var(--negative)" : "";
+  } else {
+    resultEl.textContent = "–";
+    resultEl.style.color = "";
+  }
 }
 
 // ── Injuries — yearly table ──────────────────────────────────
@@ -359,7 +430,7 @@ async function refreshSites() {
     </li>`).join("") || `<li><span style="color:#8794a8;">No plants yet — add one above.</span></li>`;
 
   const options = sitesCache.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
-  [leaveSite, manpowerSite, feedbackSite, presentSite, injuriesSite, disciplinarySite, formSite, reportsSiteFilter]
+  [leaveSite, manpowerSite, directSite, shortageSite, feedbackSite, presentSite, injuriesSite, disciplinarySite, formSite, reportsSiteFilter]
     .forEach(sel => applySiteOptions(sel, options));
   newAdminSite.innerHTML = options; // Manage Admins panel — super admins only, always full list
 
@@ -376,6 +447,8 @@ async function refreshSites() {
     await fetchSiteReports(leaveSite.value);
     loadLeaveYearTable();
     loadManpowerYearTable();
+    loadDirectYearTable();
+    loadShortageYearTable();
     loadFeedbackYearTable();
     loadPresentYearTable();
     loadInjuriesYearTable();
@@ -731,6 +804,120 @@ savePresentYearBtn.addEventListener("click", async () => {
   }
 });
 
+// ── Direct Manpower — yearly load/save ──────────────────────
+directSite.addEventListener("change", async () => {
+  await fetchSiteReports(directSite.value);
+  loadDirectYearTable();
+});
+directYear.addEventListener("change", loadDirectYearTable);
+
+function loadDirectYearTable() {
+  const siteId = directSite.value;
+  const year = directYear.value;
+  const reports = reportsCache[siteId] || {};
+
+  directRowTotals = {};
+  for (const m of MONTHS) {
+    const rec = reports[periodIdFor(year, m.num)] || {};
+    directRowTotals[m.num] = Number(rec.closingManpower) || 0;
+    document.getElementById(`directManpower_${m.num}`).value = rec.directManpower || "";
+    updateDirectRow(m.num);
+  }
+}
+
+// Re-reads only the read-only Total Manpower column (e.g. after Total Manpower was just saved),
+// without touching anything the admin has typed into the input column.
+function refreshDirectTotals() {
+  const reports = reportsCache[directSite.value] || {};
+  for (const m of MONTHS) {
+    const rec = reports[periodIdFor(directYear.value, m.num)] || {};
+    directRowTotals[m.num] = Number(rec.closingManpower) || 0;
+    updateDirectRow(m.num);
+  }
+}
+
+saveDirectYearBtn.addEventListener("click", async () => {
+  const siteId = directSite.value;
+  if (!siteId) { showToast("Add a plant first"); return; }
+  const year = directYear.value;
+
+  saveDirectYearBtn.disabled = true;
+  try {
+    await Promise.all(MONTHS.map(m => {
+      const directVal = Number(document.getElementById(`directManpower_${m.num}`).value) || 0;
+      return setDoc(
+        doc(db, "sites", siteId, "reports", periodIdFor(year, m.num)),
+        { period: periodLabelFor(year, m.name), directManpower: directVal },
+        { merge: true }
+      );
+    }));
+    showToast(`Saved Direct Manpower for ${year}`);
+    await fetchSiteReports(siteId);
+    await refreshReportsList();
+  } catch (err) {
+    console.error(err);
+    showToast("Save failed — check console / security rules");
+  } finally {
+    saveDirectYearBtn.disabled = false;
+  }
+});
+
+// ── Manpower Excess/(Shortage) — yearly load/save ───────────
+shortageSite.addEventListener("change", async () => {
+  await fetchSiteReports(shortageSite.value);
+  loadShortageYearTable();
+});
+shortageYear.addEventListener("change", loadShortageYearTable);
+
+function loadShortageYearTable() {
+  const siteId = shortageSite.value;
+  const year = shortageYear.value;
+  const reports = reportsCache[siteId] || {};
+
+  shortageRowActuals = {};
+  for (const m of MONTHS) {
+    const rec = reports[periodIdFor(year, m.num)] || {};
+    shortageRowActuals[m.num] = Number(rec.closingManpower) || 0;
+    document.getElementById(`shortageRequired_${m.num}`).value = rec.requiredManpower || "";
+    updateShortageRow(m.num);
+  }
+}
+
+function refreshShortageActuals() {
+  const reports = reportsCache[shortageSite.value] || {};
+  for (const m of MONTHS) {
+    const rec = reports[periodIdFor(shortageYear.value, m.num)] || {};
+    shortageRowActuals[m.num] = Number(rec.closingManpower) || 0;
+    updateShortageRow(m.num);
+  }
+}
+
+saveShortageYearBtn.addEventListener("click", async () => {
+  const siteId = shortageSite.value;
+  if (!siteId) { showToast("Add a plant first"); return; }
+  const year = shortageYear.value;
+
+  saveShortageYearBtn.disabled = true;
+  try {
+    await Promise.all(MONTHS.map(m => {
+      const requiredVal = Number(document.getElementById(`shortageRequired_${m.num}`).value) || 0;
+      return setDoc(
+        doc(db, "sites", siteId, "reports", periodIdFor(year, m.num)),
+        { period: periodLabelFor(year, m.name), requiredManpower: requiredVal },
+        { merge: true }
+      );
+    }));
+    showToast(`Saved Required Manpower for ${year}`);
+    await fetchSiteReports(siteId);
+    await refreshReportsList();
+  } catch (err) {
+    console.error(err);
+    showToast("Save failed — check console / security rules");
+  } finally {
+    saveShortageYearBtn.disabled = false;
+  }
+});
+
 // ── Injuries — yearly load/save ─────────────────────────────
 injuriesSite.addEventListener("change", async () => {
   await fetchSiteReports(injuriesSite.value);
@@ -979,6 +1166,8 @@ async function deleteReport(siteId, periodId) {
   await refreshReportsList();
   if (siteId === leaveSite.value) loadLeaveYearTable();
   if (siteId === manpowerSite.value) loadManpowerYearTable();
+  if (siteId === directSite.value) loadDirectYearTable();
+  if (siteId === shortageSite.value) loadShortageYearTable();
   if (siteId === feedbackSite.value) loadFeedbackYearTable();
   if (siteId === presentSite.value) loadPresentYearTable();
   if (siteId === injuriesSite.value) loadInjuriesYearTable();

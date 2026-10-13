@@ -74,6 +74,17 @@ function ytdSum(periodId, key) {
   return ids.reduce((sum, id) => sum + (Number(reportsById[id][key]) || 0), 0);
 }
 
+function fmtSigned(n) {
+  if (n === null || n === undefined) return "–";
+  return n > 0 ? `+${n.toLocaleString()}` : n.toLocaleString();
+}
+
+function setBarWidth(barId, pct) {
+  const clamped = Math.max(0, Math.min(100, pct));
+  const bar = document.getElementById(barId);
+  requestAnimationFrame(() => { bar.style.width = `${clamped}%`; });
+}
+
 function render(siteId, periodId) {
   const current = reportsById[periodId] || {};
 
@@ -153,6 +164,60 @@ function render(siteId, periodId) {
   document.getElementById("manpowerPrevMonth").textContent = prevManpower === null ? "—" : prevManpower.toLocaleString();
   document.getElementById("manpowerYtdAvg").textContent = ytdAvg.toLocaleString();
   document.getElementById("manpowerBigNum").textContent = closingManpower.toLocaleString();
+
+  // ── Direct Manpower ──────────────────────────────────────────
+  // Direct % = direct ÷ total (closing) manpower, so it depends on Total Manpower being entered.
+  const directCount = Number(current.directManpower) || 0;
+  const directPct = closingManpower > 0 ? Math.round((directCount / closingManpower) * 1000) / 10 : null;
+  const directPcts = Object.keys(reportsById)
+    .filter(id => (!year || periodYear(id) === year) && id <= periodId)
+    .map(id => {
+      const r = reportsById[id];
+      const tot = Number(r.closingManpower) || 0;
+      const dir = Number(r.directManpower) || 0;
+      return tot > 0 && dir > 0 ? (dir / tot) * 100 : null;
+    })
+    .filter(v => v !== null);
+  const directYtdAvg = directPcts.length
+    ? Math.round((directPcts.reduce((a, b) => a + b, 0) / directPcts.length) * 10) / 10
+    : null;
+
+  document.getElementById("directBigPct").textContent = directPct === null ? "–" : `${directPct}%`;
+  document.getElementById("directCount").textContent = directCount.toLocaleString();
+  document.getElementById("directTotal").textContent = closingManpower > 0 ? closingManpower.toLocaleString() : "–";
+  document.getElementById("directYtdAvg").textContent = directYtdAvg === null ? "–" : `${directYtdAvg}%`;
+  setBarWidth("directBar", directPct || 0);
+
+  // ── Manpower Excess / (Shortage) ─────────────────────────────
+  // Excess/(shortage) = actual (closing) manpower − required manpower. Negative = shortage.
+  const requiredManpower = Number(current.requiredManpower) || 0;
+  const hasShortageData = requiredManpower > 0 && closingManpower > 0;
+  const shortageDiff = hasShortageData ? closingManpower - requiredManpower : null;
+  const shortageDiffs = Object.keys(reportsById)
+    .filter(id => (!year || periodYear(id) === year) && id <= periodId)
+    .map(id => {
+      const r = reportsById[id];
+      const req = Number(r.requiredManpower) || 0;
+      const act = Number(r.closingManpower) || 0;
+      return req > 0 && act > 0 ? act - req : null;
+    })
+    .filter(v => v !== null);
+  const shortageYtdAvg = shortageDiffs.length
+    ? Math.round(shortageDiffs.reduce((a, b) => a + b, 0) / shortageDiffs.length)
+    : null;
+
+  const shortageBig = document.getElementById("shortageBigNum");
+  shortageBig.textContent = fmtSigned(shortageDiff);
+  shortageBig.classList.toggle("negative", shortageDiff !== null && shortageDiff < 0);
+  document.getElementById("shortageLabel").textContent =
+    shortageDiff === null ? "Enter required manpower in Admin"
+    : shortageDiff < 0 ? "Shortage this month"
+    : shortageDiff > 0 ? "Excess this month" : "On target this month";
+  document.getElementById("shortageRequired").textContent = requiredManpower > 0 ? requiredManpower.toLocaleString() : "–";
+  document.getElementById("shortageActual").textContent = closingManpower > 0 ? closingManpower.toLocaleString() : "–";
+  const shortageYtdEl = document.getElementById("shortageYtdAvg");
+  shortageYtdEl.textContent = fmtSigned(shortageYtdAvg);
+  shortageYtdEl.classList.toggle("negative", shortageYtdAvg !== null && shortageYtdAvg < 0);
 
   // ── Employees Feedback Received ─────────────────────────────
   const feedbackExternal = Number(current.feedbackExternal) || 0;
@@ -373,6 +438,53 @@ injuriesPanel.addEventListener("click", () => {
     datasets: [
       { key: "injuriesTotal", label: "Total", color: "#E11D48" },
       { key: "injuriesCritical", label: "Critical", color: "#7F1D1D" }
+    ],
+    chartType: "bar"
+  });
+});
+
+// ── Direct Manpower detail ───────────────────────────────────
+const directPanel = document.getElementById("directPanel");
+directPanel.addEventListener("click", () => {
+  const { year, rows } = buildMonthRows(periodSelect.value, ["directManpower", "closingManpower"]);
+  rows.forEach(r => {
+    r.directPct = r.closingManpower > 0 && r.directManpower > 0 ? Math.round((r.directManpower / r.closingManpower) * 1000) / 10 : 0;
+  });
+  const siteName = sites.find(s => s.id === currentSiteId)?.name || "";
+  openDetailModal({
+    title: `Direct Manpower — ${siteName}${year ? " " + year : ""}`,
+    rows,
+    columns: [
+      { key: "directManpower", label: "Direct" },
+      { key: "closingManpower", label: "Total" },
+      { key: "directPct", label: "Direct %", format: r => r.directPct + "%" }
+    ],
+    datasets: [
+      { key: "directPct", label: "Direct %", color: "#4F46E5" }
+    ],
+    chartType: "line"
+  });
+});
+
+// ── Manpower Excess / (Shortage) detail ──────────────────────
+const shortagePanel = document.getElementById("shortagePanel");
+shortagePanel.addEventListener("click", () => {
+  const { year, rows } = buildMonthRows(periodSelect.value, ["requiredManpower", "closingManpower"]);
+  rows.forEach(r => {
+    r.diff = r.requiredManpower > 0 && r.closingManpower > 0 ? r.closingManpower - r.requiredManpower : 0;
+    r.hasDiff = r.requiredManpower > 0 && r.closingManpower > 0;
+  });
+  const siteName = sites.find(s => s.id === currentSiteId)?.name || "";
+  openDetailModal({
+    title: `Manpower Excess / (Shortage) — ${siteName}${year ? " " + year : ""}`,
+    rows,
+    columns: [
+      { key: "requiredManpower", label: "Required" },
+      { key: "closingManpower", label: "Actual" },
+      { key: "diff", label: "Excess / (Shortage)", format: r => r.hasDiff ? fmtSigned(r.diff) : "–" }
+    ],
+    datasets: [
+      { key: "diff", label: "Excess / (Shortage)", color: "#EA580C" }
     ],
     chartType: "bar"
   });
