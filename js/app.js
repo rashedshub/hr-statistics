@@ -79,6 +79,23 @@ function fmtSigned(n) {
   return n > 0 ? `+${n.toLocaleString()}` : n.toLocaleString();
 }
 
+// Sewing Worker (Operator + Helper): actual minus standard. Negative = shortage.
+function shortageFor(rec) {
+  const stdOp = Number(rec.shortageStdOperator) || 0;
+  const stdHelper = Number(rec.shortageStdHelper) || 0;
+  const actOp = Number(rec.shortageActualOperator) || 0;
+  const actHelper = Number(rec.shortageActualHelper) || 0;
+  const stdTotal = stdOp + stdHelper;
+  const actTotal = actOp + actHelper;
+  const has = stdTotal > 0 && actTotal > 0;
+  return {
+    stdTotal, actTotal, has,
+    opDiff: actOp - stdOp,
+    helperDiff: actHelper - stdHelper,
+    diff: actTotal - stdTotal
+  };
+}
+
 function setBarWidth(barId, pct) {
   const clamped = Math.max(0, Math.min(100, pct));
   const bar = document.getElementById(barId);
@@ -188,36 +205,32 @@ function render(siteId, periodId) {
   document.getElementById("directYtdAvg").textContent = directYtdAvg === null ? "–" : `${directYtdAvg}%`;
   setBarWidth("directBar", directPct || 0);
 
-  // ── Manpower Excess / (Shortage) ─────────────────────────────
-  // Excess/(shortage) = actual (closing) manpower − required manpower. Negative = shortage.
-  const requiredManpower = Number(current.requiredManpower) || 0;
-  const hasShortageData = requiredManpower > 0 && closingManpower > 0;
-  const shortageDiff = hasShortageData ? closingManpower - requiredManpower : null;
+  // ── Manpower Excess / (Shortage) — Sewing Worker (Operator + Helper) ─
+  const sf = shortageFor(current);
   const shortageDiffs = Object.keys(reportsById)
     .filter(id => (!year || periodYear(id) === year) && id <= periodId)
-    .map(id => {
-      const r = reportsById[id];
-      const req = Number(r.requiredManpower) || 0;
-      const act = Number(r.closingManpower) || 0;
-      return req > 0 && act > 0 ? act - req : null;
-    })
-    .filter(v => v !== null);
+    .map(id => shortageFor(reportsById[id]))
+    .filter(r => r.has)
+    .map(r => r.diff);
   const shortageYtdAvg = shortageDiffs.length
     ? Math.round(shortageDiffs.reduce((a, b) => a + b, 0) / shortageDiffs.length)
     : null;
 
-  const shortageBig = document.getElementById("shortageBigNum");
-  shortageBig.textContent = fmtSigned(shortageDiff);
-  shortageBig.classList.toggle("negative", shortageDiff !== null && shortageDiff < 0);
+  const setSigned = (id, value) => {
+    const el = document.getElementById(id);
+    el.textContent = fmtSigned(value);
+    el.classList.toggle("negative", value !== null && value < 0);
+  };
+  setSigned("shortageBigNum", sf.has ? sf.diff : null);
+  setSigned("shortageOperator", sf.has ? sf.opDiff : null);
+  setSigned("shortageHelper", sf.has ? sf.helperDiff : null);
+  setSigned("shortageYtdAvg", shortageYtdAvg);
   document.getElementById("shortageLabel").textContent =
-    shortageDiff === null ? "Enter required manpower in Admin"
-    : shortageDiff < 0 ? "Shortage this month"
-    : shortageDiff > 0 ? "Excess this month" : "On target this month";
-  document.getElementById("shortageRequired").textContent = requiredManpower > 0 ? requiredManpower.toLocaleString() : "–";
-  document.getElementById("shortageActual").textContent = closingManpower > 0 ? closingManpower.toLocaleString() : "–";
-  const shortageYtdEl = document.getElementById("shortageYtdAvg");
-  shortageYtdEl.textContent = fmtSigned(shortageYtdAvg);
-  shortageYtdEl.classList.toggle("negative", shortageYtdAvg !== null && shortageYtdAvg < 0);
+    !sf.has ? "Enter standard & actual in Admin"
+    : sf.diff < 0 ? "Shortage this month"
+    : sf.diff > 0 ? "Excess this month" : "On target this month";
+  document.getElementById("shortageStandard").textContent = sf.stdTotal > 0 ? sf.stdTotal.toLocaleString() : "–";
+  document.getElementById("shortageActual").textContent = sf.actTotal > 0 ? sf.actTotal.toLocaleString() : "–";
 
   // ── Employees Feedback Received ─────────────────────────────
   const feedbackExternal = Number(current.feedbackExternal) || 0;
@@ -469,22 +482,29 @@ directPanel.addEventListener("click", () => {
 // ── Manpower Excess / (Shortage) detail ──────────────────────
 const shortagePanel = document.getElementById("shortagePanel");
 shortagePanel.addEventListener("click", () => {
-  const { year, rows } = buildMonthRows(periodSelect.value, ["requiredManpower", "closingManpower"]);
+  const { year, rows } = buildMonthRows(periodSelect.value, [
+    "shortageStdOperator", "shortageStdHelper", "shortageActualOperator", "shortageActualHelper"
+  ]);
   rows.forEach(r => {
-    r.diff = r.requiredManpower > 0 && r.closingManpower > 0 ? r.closingManpower - r.requiredManpower : 0;
-    r.hasDiff = r.requiredManpower > 0 && r.closingManpower > 0;
+    const f = shortageFor(r);
+    r.sf = f;
+    r.opDiffC = f.has ? f.opDiff : 0;
+    r.helperDiffC = f.has ? f.helperDiff : 0;
   });
   const siteName = sites.find(s => s.id === currentSiteId)?.name || "";
   openDetailModal({
-    title: `Manpower Excess / (Shortage) — ${siteName}${year ? " " + year : ""}`,
+    title: `Excess / (Shortage), Sewing Worker — ${siteName}${year ? " " + year : ""}`,
     rows,
     columns: [
-      { key: "requiredManpower", label: "Required" },
-      { key: "closingManpower", label: "Actual" },
-      { key: "diff", label: "Excess / (Shortage)", format: r => r.hasDiff ? fmtSigned(r.diff) : "–" }
+      { key: "std", label: "Standard", format: r => r.sf.stdTotal.toLocaleString() },
+      { key: "act", label: "Actual", format: r => r.sf.actTotal.toLocaleString() },
+      { key: "opDiffC", label: "Operator", format: r => r.sf.has ? fmtSigned(r.sf.opDiff) : "–" },
+      { key: "helperDiffC", label: "Helper", format: r => r.sf.has ? fmtSigned(r.sf.helperDiff) : "–" },
+      { key: "total", label: "Total", format: r => r.sf.has ? fmtSigned(r.sf.diff) : "–" }
     ],
     datasets: [
-      { key: "diff", label: "Excess / (Shortage)", color: "#EA580C" }
+      { key: "opDiffC", label: "Operator", color: "#EA580C" },
+      { key: "helperDiffC", label: "Helper", color: "#FDBA74" }
     ],
     chartType: "bar"
   });

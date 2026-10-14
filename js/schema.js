@@ -109,9 +109,12 @@ export const TOPICS = [
     title: "Manpower excess/(shortage)",
     icon: "shield-alert",
     enabled: true,
-    customAdminUI: true, // own yearly table in admin.js. excess/(shortage) = closingManpower - requiredManpower
+    customAdminUI: true, // own yearly table in admin.js. Sewing worker (Operator + Helper) actual vs standard
     fields: [
-      { key: "requiredManpower", label: "Required manpower (budgeted headcount)", type: "number" }
+      { key: "shortageStdOperator", label: "Standard manpower — Sewing Operator", type: "number" },
+      { key: "shortageStdHelper", label: "Standard manpower — Sewing Helper", type: "number" },
+      { key: "shortageActualOperator", label: "Actual manpower — Sewing Operator", type: "number" },
+      { key: "shortageActualHelper", label: "Actual manpower — Sewing Helper", type: "number" }
     ]
   },
 

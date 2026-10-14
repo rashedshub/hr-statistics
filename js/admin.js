@@ -46,7 +46,6 @@ function showAdminPanel(targetId) {
   document.getElementById(targetId)?.classList.add("panel-active");
   adminNavItems.forEach(b => b.classList.toggle("active", b.dataset.target === targetId));
   if (targetId === "panelDirectManpower") refreshDirectTotals();
-  if (targetId === "panelShortage") refreshShortageActuals();
 }
 
 const sitesList = document.getElementById("sitesList");
@@ -288,28 +287,37 @@ function updateDirectRow(num) {
   document.getElementById(`directPct_${num}`).textContent = pct === null ? "–" : `${pct}%`;
 }
 
-// ── Manpower Excess/(Shortage) — yearly table ────────────────
-let shortageRowActuals = {};
+// ── Manpower Excess/(Shortage) — yearly table (Sewing Operator + Helper) ─
+const SHORTAGE_INPUTS = ["StdOp", "StdHelper", "ActOp", "ActHelper"];
 
 shortageMonthTableBody.innerHTML = MONTHS.map(m => `
   <tr>
     <td>${m.name}</td>
-    <td><input type="number" step="any" id="shortageRequired_${m.num}"></td>
-    <td><span class="row-total" id="shortageActual_${m.num}">–</span></td>
+    <td><input type="number" step="any" id="shortageStdOp_${m.num}"></td>
+    <td><input type="number" step="any" id="shortageStdHelper_${m.num}"></td>
+    <td><span class="row-total" id="shortageStdTotal_${m.num}">–</span></td>
+    <td><input type="number" step="any" id="shortageActOp_${m.num}"></td>
+    <td><input type="number" step="any" id="shortageActHelper_${m.num}"></td>
+    <td><span class="row-total" id="shortageActTotal_${m.num}">–</span></td>
     <td><span class="row-total" id="shortageResult_${m.num}">–</span></td>
   </tr>`).join("");
 
 MONTHS.forEach(m => {
-  document.getElementById(`shortageRequired_${m.num}`).addEventListener("input", () => updateShortageRow(m.num));
+  SHORTAGE_INPUTS.forEach(k => {
+    document.getElementById(`shortage${k}_${m.num}`).addEventListener("input", () => updateShortageRow(m.num));
+  });
 });
 
 function updateShortageRow(num) {
-  const required = Number(document.getElementById(`shortageRequired_${num}`).value) || 0;
-  const actual = shortageRowActuals[num] || 0;
-  document.getElementById(`shortageActual_${num}`).textContent = actual > 0 ? actual.toLocaleString() : "–";
+  const val = k => Number(document.getElementById(`shortage${k}_${num}`).value) || 0;
+  const stdTotal = val("StdOp") + val("StdHelper");
+  const actTotal = val("ActOp") + val("ActHelper");
+  document.getElementById(`shortageStdTotal_${num}`).textContent = stdTotal > 0 ? stdTotal.toLocaleString() : "–";
+  document.getElementById(`shortageActTotal_${num}`).textContent = actTotal > 0 ? actTotal.toLocaleString() : "–";
+
   const resultEl = document.getElementById(`shortageResult_${num}`);
-  if (required > 0 && actual > 0) {
-    const diff = actual - required;
+  if (stdTotal > 0 && actTotal > 0) {
+    const diff = actTotal - stdTotal;
     resultEl.textContent = diff > 0 ? `+${diff.toLocaleString()}` : diff.toLocaleString();
     resultEl.style.color = diff < 0 ? "var(--negative)" : "";
   } else {
@@ -874,20 +882,12 @@ function loadShortageYearTable() {
   const year = shortageYear.value;
   const reports = reportsCache[siteId] || {};
 
-  shortageRowActuals = {};
   for (const m of MONTHS) {
     const rec = reports[periodIdFor(year, m.num)] || {};
-    shortageRowActuals[m.num] = Number(rec.closingManpower) || 0;
-    document.getElementById(`shortageRequired_${m.num}`).value = rec.requiredManpower || "";
-    updateShortageRow(m.num);
-  }
-}
-
-function refreshShortageActuals() {
-  const reports = reportsCache[shortageSite.value] || {};
-  for (const m of MONTHS) {
-    const rec = reports[periodIdFor(shortageYear.value, m.num)] || {};
-    shortageRowActuals[m.num] = Number(rec.closingManpower) || 0;
+    document.getElementById(`shortageStdOp_${m.num}`).value = rec.shortageStdOperator || "";
+    document.getElementById(`shortageStdHelper_${m.num}`).value = rec.shortageStdHelper || "";
+    document.getElementById(`shortageActOp_${m.num}`).value = rec.shortageActualOperator || "";
+    document.getElementById(`shortageActHelper_${m.num}`).value = rec.shortageActualHelper || "";
     updateShortageRow(m.num);
   }
 }
@@ -900,14 +900,20 @@ saveShortageYearBtn.addEventListener("click", async () => {
   saveShortageYearBtn.disabled = true;
   try {
     await Promise.all(MONTHS.map(m => {
-      const requiredVal = Number(document.getElementById(`shortageRequired_${m.num}`).value) || 0;
+      const val = k => Number(document.getElementById(`shortage${k}_${m.num}`).value) || 0;
       return setDoc(
         doc(db, "sites", siteId, "reports", periodIdFor(year, m.num)),
-        { period: periodLabelFor(year, m.name), requiredManpower: requiredVal },
+        {
+          period: periodLabelFor(year, m.name),
+          shortageStdOperator: val("StdOp"),
+          shortageStdHelper: val("StdHelper"),
+          shortageActualOperator: val("ActOp"),
+          shortageActualHelper: val("ActHelper")
+        },
         { merge: true }
       );
     }));
-    showToast(`Saved Required Manpower for ${year}`);
+    showToast(`Saved Excess / (Shortage) for ${year}`);
     await fetchSiteReports(siteId);
     await refreshReportsList();
   } catch (err) {

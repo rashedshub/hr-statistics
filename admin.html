@@ -184,11 +184,10 @@
   </div>
 
   <div class="admin-panel" id="panelShortage">
-    <h2 style="margin-top:0;">Manpower Excess / (Shortage) — yearly entry</h2>
+    <h2 style="margin-top:0;">Manpower Excess / (Shortage) — Sewing Worker (Operator &amp; Helper)</h2>
     <p class="hint" style="margin-top:-6px;margin-bottom:14px;">
-      Enter each month's required (budgeted) manpower. Actual manpower is read from what you saved under
-      <b>Total Manpower</b>, and Excess/(Shortage) is calculated automatically (Actual &minus; Required).
-      A negative number is a shortage.
+      Enter each month's <b>standard</b> manpower and <b>actual</b> manpower for Sewing Operators and Sewing Helpers.
+      Totals and Excess/(Shortage) are calculated automatically (Actual &minus; Standard). A negative number is a shortage.
     </p>
     <div class="form-grid">
       <div class="field">
@@ -203,13 +202,22 @@
 
     <table class="month-table" id="shortageMonthTable">
       <thead>
-        <tr><th>Month</th><th>Required Manpower</th><th>Actual Manpower (saved)</th><th>Excess / (Shortage) (auto)</th></tr>
+        <tr>
+          <th>Month</th>
+          <th>Standard Operator</th>
+          <th>Standard Helper</th>
+          <th>Standard Total</th>
+          <th>Actual Operator</th>
+          <th>Actual Helper</th>
+          <th>Actual Total</th>
+          <th>Excess / (Shortage)</th>
+        </tr>
       </thead>
       <tbody><!-- 12 rows injected by admin.js --></tbody>
     </table>
 
     <div style="margin-top:16px;">
-      <button class="btn primary" id="saveShortageYearBtn"><i data-lucide="save"></i> Save Required Manpower (whole year)</button>
+      <button class="btn primary" id="saveShortageYearBtn"><i data-lucide="save"></i> Save Excess / (Shortage) (whole year)</button>
     </div>
   </div>
 
