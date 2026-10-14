@@ -21,6 +21,7 @@ function setState(msg) {
     stateMsg.style.display = "none";
     topicsWrap.style.display = "grid";
   }
+  applyStage();
 }
 
 async function loadSites() {
@@ -567,6 +568,53 @@ siteSelect.addEventListener("change", async () => {
 
 periodSelect.addEventListener("change", () => {
   render(currentSiteId, periodSelect.value);
+});
+
+// ── One-page "slide" view + full-screen presentation mode ────
+// The card grid is laid out on a fixed 1600x960 stage and scaled to fit the window,
+// so everything shows on one screen with no scrolling. Windows too small to read it
+// (or narrow phones) keep the normal scrolling layout — except in full screen, which
+// always uses the stage.
+const STAGE_W = 1600, STAGE_H = 960, STAGE_MARGIN = 12;
+const STAGE_MIN_SCALE = 0.62, STAGE_MAX_SCALE = 2.5, STAGE_MIN_WIDTH = 900;
+const topbarEl = document.querySelector(".hs-topbar");
+const fullscreenBtn = document.getElementById("fullscreenBtn");
+
+function applyStage() {
+  const isFs = !!document.fullscreenElement;
+  document.body.classList.toggle("is-fullscreen", isFs);
+
+  const availW = window.innerWidth - STAGE_MARGIN * 2;
+  const availH = window.innerHeight - topbarEl.offsetHeight - STAGE_MARGIN * 2;
+  const scale = Math.min(availW / STAGE_W, availH / STAGE_H, STAGE_MAX_SCALE);
+  const useStage = window.innerWidth >= STAGE_MIN_WIDTH && (isFs || scale >= STAGE_MIN_SCALE);
+  document.body.classList.toggle("stage-mode", useStage);
+
+  if (useStage) {
+    const offset = STAGE_MARGIN + Math.max(0, (availH - STAGE_H * scale) / 2);
+    topicsWrap.style.setProperty("--stage-scale", scale.toFixed(4));
+    topicsWrap.style.setProperty("--stage-offset", `${offset.toFixed(1)}px`);
+  }
+}
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen?.().catch(err => console.error(err));
+  } else {
+    document.exitFullscreen?.();
+  }
+}
+
+if (!document.fullscreenEnabled) fullscreenBtn.style.display = "none";
+fullscreenBtn.addEventListener("click", toggleFullscreen);
+window.addEventListener("resize", applyStage);
+document.addEventListener("fullscreenchange", applyStage);
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "f" && e.key !== "F") return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (/^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement?.tagName)) return;
+  if (detailModal.style.display === "flex") return;
+  toggleFullscreen();
 });
 
 setState("Loading dashboard…");

@@ -623,3 +623,53 @@ body{
 @media (prefers-reduced-motion: reduce){
   *{animation-duration:.01ms !important;transition-duration:.01ms !important;}
 }
+
+
+/* ─────────────────────────────────────────────────────────────
+   Present button + one-page "slide" view
+   The 3x3 card grid is laid out on a fixed 1600x960 stage and scaled to
+   fit the window (see applyStage() in app.js). Narrow or very small
+   windows fall back to the normal scrolling layout.
+───────────────────────────────────────────────────────────── */
+.hs-fs-btn{
+  display:inline-flex;align-items:center;gap:6px;
+  border:1px solid var(--line);background:var(--surface);color:var(--ink-soft);
+  border-radius:999px;padding:6px 14px;
+  font-family:var(--font-body);font-size:13px;font-weight:600;cursor:pointer;
+  transition:background .15s ease, color .15s ease;
+}
+.hs-fs-btn:hover{background:var(--canvas);color:var(--ink);}
+.hs-fs-btn svg{width:15px;height:15px;}
+.hs-fs-btn span{display:inline-flex;align-items:center;}
+.hs-fs-btn .icon-exit{display:none;}
+body.is-fullscreen .hs-fs-btn .icon-enter{display:none;}
+body.is-fullscreen .hs-fs-btn .icon-exit{display:inline-flex;}
+body.is-fullscreen .hs-fs-btn .fs-label{display:none;}
+body.is-fullscreen .hs-topbar{padding:8px 24px;}
+body.is-fullscreen .hs-admin-link{display:none;}
+
+body.stage-mode{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
+body.stage-mode .hs-topbar{position:static;flex:0 0 auto;}
+body.stage-mode main{flex:1 1 auto;min-height:0;overflow:hidden;display:flex;justify-content:center;}
+body.stage-mode .hs-panels{
+  width:1600px;height:960px;flex:0 0 auto;max-width:none;
+  margin:var(--stage-offset, 0) 0 0;padding:0;
+  grid-template-columns:repeat(3, 1fr);
+  grid-template-rows:repeat(3, 1fr);
+  gap:16px;align-items:stretch;
+  transform:scale(var(--stage-scale, 1));
+  transform-origin:top center;
+}
+/* compact card spacing so every card fits its slot on the stage */
+body.stage-mode .stat-panel{padding:14px 18px 12px;}
+body.stage-mode .stat-panel-header{margin-bottom:8px;}
+body.stage-mode .hero-figure{font-size:36px;}
+body.stage-mode .hero-label{margin-top:2px;}
+body.stage-mode .stat-divider{margin:8px 0;}
+body.stage-mode .stat-grid-2{gap:6px 16px;}
+body.stage-mode .mini-stat b{font-size:15px;}
+body.stage-mode .category-tag{margin-top:8px;padding:4px 10px;}
+body.stage-mode .progress-row{margin-bottom:2px;}
+body.stage-mode #leavePanel .stat-grid-2{margin-bottom:4px !important;}
+body.stage-mode #leavePanel .progress-row[style]{margin-top:6px !important;}
+body.stage-mode #directPanel .progress-track{margin-top:8px !important;}
