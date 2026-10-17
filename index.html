@@ -35,25 +35,26 @@
 
   <div id="topicsWrap" class="hs-panels" style="display:none;">
 
-    <!-- Total Manpower -->
-    <div class="stat-panel clickable-panel" id="manpowerPanel" tabindex="0" title="Click for month-by-month detail">
+    <!-- Manpower -->
+    <div class="stat-panel clickable-panel" id="manpowerPanel" tabindex="0" title="Click for month-by-month detail table">
       <div class="stat-panel-header">
         <span class="card-icon-badge"><i data-lucide="users"></i></span>
-        <span class="card-eyebrow">Total Manpower</span>
+        <span class="card-eyebrow">Manpower</span>
         <span class="card-chevron"><i data-lucide="chevron-right"></i></span>
       </div>
 
-      <div class="hero-figure tabular" id="manpowerBigNum">–</div>
-      <div class="hero-label">This month, total headcount</div>
-
-      <div class="stat-divider"></div>
-
-      <div class="stat-grid-2">
-        <div class="mini-stat"><span>Worker</span><b class="tabular" id="manpowerWorker">–</b></div>
-        <div class="mini-stat"><span>Non-Worker</span><b class="tabular" id="manpowerNonWorker">–</b></div>
-        <div class="mini-stat"><span>Previous month</span><b class="tabular" id="manpowerPrevMonth">–</b></div>
-        <div class="mini-stat"><span>YTD average</span><b class="tabular" id="manpowerYtdAvg">–</b></div>
+      <div class="mp-body">
+        <div class="mp-left">
+          <div class="hero-figure tabular" id="manpowerBigNum">–</div>
+          <div class="mp-split">
+            <div><span class="mp-dot mp-dot-w"></span>W: <b class="tabular" id="manpowerWorker">–</b></div>
+            <div><span class="mp-dot mp-dot-nw"></span>NW: <b class="tabular" id="manpowerNonWorker">–</b></div>
+          </div>
+        </div>
+        <div class="mp-pie"><canvas id="manpowerPie"></canvas></div>
       </div>
+
+      <div class="mp-ytd" title="Year-to-date average of the monthly total">YTD: <b class="tabular" id="manpowerYtdAvg">–</b></div>
     </div>
 
     <!-- Direct Manpower -->

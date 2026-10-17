@@ -46,14 +46,17 @@ export const TOPICS = [
   },
   {
     id: "manpower",
-    title: "Total Manpower",
+    title: "Manpower",
     icon: "users",
     enabled: true,
     customAdminUI: true, // has its own year-at-a-glance table in admin.js — skipped by the generic form
     fields: [
       { key: "workerManpower", label: "Worker (headcount)", type: "number" },
       { key: "nonWorkerManpower", label: "Non-Worker (headcount)", type: "number" },
-      { key: "closingManpower", label: "Total closing manpower (derived: Worker + Non-Worker)", type: "number" }
+      { key: "closingManpower", label: "Total (W+NW) — derived: Worker + Non-Worker", type: "number" },
+      { key: "sewingOperatorManpower", label: "Sewing Operator (headcount)", type: "number" },
+      { key: "sewingHelperManpower", label: "Sewing Helper (headcount)", type: "number" },
+      { key: "externalManpower", label: "External (headcount)", type: "number" }
     ]
   },
 

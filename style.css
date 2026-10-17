@@ -673,3 +673,22 @@ body.stage-mode .progress-row{margin-bottom:2px;}
 body.stage-mode #leavePanel .stat-grid-2{margin-bottom:4px !important;}
 body.stage-mode #leavePanel .progress-row[style]{margin-top:6px !important;}
 body.stage-mode #directPanel .progress-track{margin-top:8px !important;}
+
+
+/* ── Manpower card (Excel prototype layout) ─────────────────── */
+.mp-body{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:2px;}
+.mp-split{margin-top:10px;font-size:13px;color:var(--ink-soft);display:flex;flex-direction:column;gap:4px;}
+.mp-split b{font-family:var(--font-display);font-size:14px;color:var(--ink);}
+.mp-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;}
+.mp-dot-w{background:#2A56C6;}
+.mp-dot-nw{background:#9DB4EC;}
+.mp-pie{width:96px;height:96px;flex:0 0 96px;position:relative;}
+.mp-ytd{text-align:right;margin-top:10px;font-size:13px;font-weight:600;color:var(--ink-soft);}
+.mp-ytd b{font-family:var(--font-display);font-size:18px;color:var(--ink);margin-left:4px;}
+body.stage-mode .mp-ytd{margin-top:6px;}
+
+/* ── Detail popup: wide variant + footer (Average) row ─────── */
+.modal-box.modal-wide{max-width:920px;}
+.detail-table tr.detail-footer-row td{
+  font-weight:700;background:var(--canvas);border-top:2px solid var(--line);border-bottom:none;
+}

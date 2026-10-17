@@ -30,7 +30,7 @@
       <button class="admin-nav-item" data-target="plantsPanel"><i data-lucide="factory"></i><span>Plants</span></button>
       <button class="admin-nav-item" data-target="manageAdminsPanel"><i data-lucide="shield-check"></i><span>Manage Admins</span></button>
       <button class="admin-nav-item" data-target="panelLeave"><i data-lucide="calendar-clock"></i><span>Leave Consumption</span></button>
-      <button class="admin-nav-item" data-target="panelManpower"><i data-lucide="users"></i><span>Total Manpower</span></button>
+      <button class="admin-nav-item" data-target="panelManpower"><i data-lucide="users"></i><span>Manpower</span></button>
       <button class="admin-nav-item" data-target="panelDirectManpower"><i data-lucide="user-check"></i><span>Direct Manpower</span></button>
       <button class="admin-nav-item" data-target="panelShortage"><i data-lucide="shield-alert"></i><span>Excess / (Shortage)</span></button>
       <button class="admin-nav-item" data-target="panelFeedback"><i data-lucide="message-circle"></i><span>Feedback Received</span></button>
@@ -127,9 +127,11 @@
   </div>
 
   <div class="admin-panel" id="panelManpower">
-    <h2 style="margin-top:0;">Total Manpower — yearly entry</h2>
+    <h2 style="margin-top:0;">Manpower — yearly entry</h2>
     <p class="hint" style="margin-top:-6px;margin-bottom:14px;">
-      Enter each month's closing (month-end) headcount — no need to type month or year.
+      Enter each month's Worker and Non-Worker headcount — Total (W+NW) is calculated automatically.
+      Sewing Operator, Sewing Helper and External are entered separately and are not part of the total.
+      The Average row skips months with no entry.
     </p>
     <div class="form-grid">
       <div class="field">
@@ -144,13 +146,32 @@
 
     <table class="month-table" id="manpowerMonthTable">
       <thead>
-        <tr><th>Month</th><th>Worker</th><th>Non-Worker</th><th>Total (auto)</th></tr>
+        <tr>
+          <th>Month</th>
+          <th>Total (W+NW)</th>
+          <th>Worker (W)</th>
+          <th>Non-Worker (NW)</th>
+          <th>Sewing Operator</th>
+          <th>Sewing Helper</th>
+          <th>External</th>
+        </tr>
       </thead>
       <tbody><!-- 12 rows injected by admin.js --></tbody>
+      <tfoot>
+        <tr>
+          <td>Average</td>
+          <td><span class="row-total" id="manpowerAvgTotal">–</span></td>
+          <td><span class="row-total" id="manpowerAvgWorker">–</span></td>
+          <td><span class="row-total" id="manpowerAvgNonWorker">–</span></td>
+          <td><span class="row-total" id="manpowerAvgSewingOp">–</span></td>
+          <td><span class="row-total" id="manpowerAvgSewingHelper">–</span></td>
+          <td><span class="row-total" id="manpowerAvgExternal">–</span></td>
+        </tr>
+      </tfoot>
     </table>
 
     <div style="margin-top:16px;">
-      <button class="btn primary" id="saveManpowerYearBtn"><i data-lucide="save"></i> Save Total Manpower (whole year)</button>
+      <button class="btn primary" id="saveManpowerYearBtn"><i data-lucide="save"></i> Save Manpower (whole year)</button>
     </div>
   </div>
 
@@ -158,7 +179,7 @@
     <h2 style="margin-top:0;">Direct Manpower — yearly entry</h2>
     <p class="hint" style="margin-top:-6px;margin-bottom:14px;">
       Enter each month's direct manpower headcount. Total Manpower is read from what you saved under
-      <b>Total Manpower</b>, and Direct % is calculated automatically (Direct &divide; Total &times; 100).
+      <b>Manpower</b>, and Direct % is calculated automatically (Direct &divide; Total &times; 100).
     </p>
     <div class="form-grid">
       <div class="field">

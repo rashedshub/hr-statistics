@@ -75,6 +75,32 @@ function ytdSum(periodId, key) {
   return ids.reduce((sum, id) => sum + (Number(reportsById[id][key]) || 0), 0);
 }
 
+let manpowerPie = null;
+function drawManpowerPie(worker, nonWorker) {
+  const empty = worker + nonWorker === 0;
+  if (manpowerPie) manpowerPie.destroy();
+  manpowerPie = new Chart(document.getElementById("manpowerPie").getContext("2d"), {
+    type: "pie",
+    data: {
+      labels: ["Worker (W)", "Non-Worker (NW)"],
+      datasets: [{
+        data: empty ? [1] : [worker, nonWorker],
+        backgroundColor: empty ? ["#E4E8EF"] : ["#2A56C6", "#9DB4EC"],
+        borderWidth: 2, borderColor: "#fff"
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, datalabels: { display: false }, tooltip: { enabled: !empty } }
+    }
+  });
+}
+
+function fmtAvg(n) {
+  if (n === null || n === undefined) return "–";
+  return (Number.isInteger(n) ? n : Math.round(n * 10) / 10).toLocaleString();
+}
+
 function fmtSigned(n) {
   if (n === null || n === undefined) return "–";
   return n > 0 ? `+${n.toLocaleString()}` : n.toLocaleString();
@@ -157,19 +183,11 @@ function render(siteId, periodId) {
   document.getElementById("injuriesCriticalMonth").textContent = injuriesCriticalMonth.toLocaleString();
   document.getElementById("injuriesYtdCritical").textContent = injuriesYtdCritical.toLocaleString();
 
-  // ── Total Manpower ──────────────────────────────────────────
+  // ── Manpower ─────────────────────────────────────────────────
   const workerManpower = Number(current.workerManpower) || 0;
   const nonWorkerManpower = Number(current.nonWorkerManpower) || 0;
   const closingManpower = Number(current.closingManpower) || (workerManpower + nonWorkerManpower);
   const year = periodYear(periodId);
-  let prevManpower = null;
-  if (year) {
-    const monthNum = parseInt(periodId.slice(5, 7), 10);
-    if (monthNum > 1) {
-      const prevId = `${year}-${String(monthNum - 1).padStart(2, "0")}`;
-      if (reportsById[prevId]) prevManpower = Number(reportsById[prevId].closingManpower) || 0;
-    }
-  }
   let ytdIds = Object.keys(reportsById);
   if (year) ytdIds = ytdIds.filter(id => periodYear(id) === year);
   ytdIds = ytdIds.filter(id => id <= periodId && Number(reportsById[id].closingManpower) > 0);
@@ -179,9 +197,9 @@ function render(siteId, periodId) {
 
   document.getElementById("manpowerWorker").textContent = workerManpower.toLocaleString();
   document.getElementById("manpowerNonWorker").textContent = nonWorkerManpower.toLocaleString();
-  document.getElementById("manpowerPrevMonth").textContent = prevManpower === null ? "—" : prevManpower.toLocaleString();
   document.getElementById("manpowerYtdAvg").textContent = ytdAvg.toLocaleString();
   document.getElementById("manpowerBigNum").textContent = closingManpower.toLocaleString();
+  drawManpowerPie(workerManpower, nonWorkerManpower);
 
   // ── Direct Manpower ──────────────────────────────────────────
   // Direct % = direct ÷ total (closing) manpower, so it depends on Total Manpower being entered.
@@ -335,6 +353,12 @@ function openDetailModal(config) {
     }).join("");
     return `<tr><td>${row.label}</td>${cells}</tr>`;
   }).join("");
+
+  if (config.footer) {
+    detailModalTableBody.innerHTML += `<tr class="detail-footer-row"><td>${config.footer.label}</td>${
+      config.footer.cells.map(c => `<td>${c}</td>`).join("")}</tr>`;
+  }
+  detailModal.querySelector(".modal-box").classList.toggle("modal-wide", !!config.wide);
 
   const ctx = document.getElementById("detailModalChart").getContext("2d");
   if (detailChart) detailChart.destroy();
@@ -511,24 +535,41 @@ shortagePanel.addEventListener("click", () => {
   });
 });
 
-// ── Total Manpower detail ───────────────────────────────────
+// ── Manpower detail (table of everything entered, with Average row) ──
 const manpowerPanel = document.getElementById("manpowerPanel");
 manpowerPanel.addEventListener("click", () => {
-  const { year, rows } = buildMonthRows(periodSelect.value, ["workerManpower", "nonWorkerManpower", "closingManpower"]);
+  const { year, rows } = buildMonthRows(periodSelect.value, [
+    "workerManpower", "nonWorkerManpower", "closingManpower",
+    "sewingOperatorManpower", "sewingHelperManpower", "externalManpower"
+  ]);
+  rows.forEach(r => { r.totalMp = r.closingManpower > 0 ? r.closingManpower : r.workerManpower + r.nonWorkerManpower; });
+
+  const dash = key => r => r[key] > 0 ? r[key].toLocaleString() : "–";
+  const avgOf = key => {
+    const vals = rows.map(r => r[key]).filter(v => v > 0);
+    return vals.length ? fmtAvg(vals.reduce((a, b) => a + b, 0) / vals.length) : "–";
+  };
+  const columns = [
+    { key: "totalMp", label: "Total (W+NW)" },
+    { key: "workerManpower", label: "Worker (W)" },
+    { key: "nonWorkerManpower", label: "Non-Worker (NW)" },
+    { key: "sewingOperatorManpower", label: "Sewing Operator" },
+    { key: "sewingHelperManpower", label: "Sewing Helper" },
+    { key: "externalManpower", label: "External" }
+  ].map(c => ({ ...c, format: dash(c.key) }));
+
   const siteName = sites.find(s => s.id === currentSiteId)?.name || "";
   openDetailModal({
-    title: `Total Manpower — ${siteName}${year ? " " + year : ""}`,
+    title: `Manpower — ${siteName}${year ? " " + year : ""}`,
     rows,
-    columns: [
-      { key: "workerManpower", label: "Worker" },
-      { key: "nonWorkerManpower", label: "Non-Worker" },
-      { key: "closingManpower", label: "Total" }
-    ],
+    columns,
+    footer: { label: "Average", cells: columns.map(c => avgOf(c.key)) },
     datasets: [
-      { key: "workerManpower", label: "Worker", color: "#3b6fae" },
-      { key: "nonWorkerManpower", label: "Non-Worker", color: "#e8b23b" }
+      { key: "workerManpower", label: "Worker (W)", color: "#2A56C6" },
+      { key: "nonWorkerManpower", label: "Non-Worker (NW)", color: "#9DB4EC" }
     ],
-    chartType: "bar"
+    chartType: "bar",
+    wide: true
   });
 });
 

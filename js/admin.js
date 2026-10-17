@@ -185,26 +185,54 @@ leaveMonthTableBody.innerHTML = MONTHS.map(m => `
     <td><input type="number" step="any" id="leaveMonthActual_${m.num}"></td>
   </tr>`).join("");
 
+// Manpower entry: Worker / Non-Worker (Total = W + NW) plus Sewing Operator, Sewing Helper, External.
+const MANPOWER_INPUTS = ["Worker", "NonWorker", "SewingOp", "SewingHelper", "External"];
+const mpVal = (k, num) => Number(document.getElementById(`manpower${k}_${num}`).value) || 0;
+
 manpowerMonthTableBody.innerHTML = MONTHS.map(m => `
   <tr>
     <td>${m.name}</td>
+    <td><span class="row-total" id="manpowerTotal_${m.num}">–</span></td>
     <td><input type="number" step="any" id="manpowerWorker_${m.num}"></td>
     <td><input type="number" step="any" id="manpowerNonWorker_${m.num}"></td>
-    <td><span class="row-total" id="manpowerTotal_${m.num}">0</span></td>
+    <td><input type="number" step="any" id="manpowerSewingOp_${m.num}"></td>
+    <td><input type="number" step="any" id="manpowerSewingHelper_${m.num}"></td>
+    <td><input type="number" step="any" id="manpowerExternal_${m.num}"></td>
   </tr>`).join("");
 
 MONTHS.forEach(m => {
-  const recalc = () => updateManpowerRowTotal(m.num);
-  document.getElementById(`manpowerWorker_${m.num}`).addEventListener("input", recalc);
-  document.getElementById(`manpowerNonWorker_${m.num}`).addEventListener("input", recalc);
+  MANPOWER_INPUTS.forEach(k => {
+    document.getElementById(`manpower${k}_${m.num}`).addEventListener("input", () => updateManpowerRowTotal(m.num));
+  });
 });
 
+function fmtAvg(n) {
+  if (n === null || n === undefined) return "–";
+  return (Number.isInteger(n) ? n : Math.round(n * 10) / 10).toLocaleString();
+}
+
 function updateManpowerRowTotal(num) {
-  const worker = Number(document.getElementById(`manpowerWorker_${num}`).value) || 0;
-  const nonWorker = Number(document.getElementById(`manpowerNonWorker_${num}`).value) || 0;
-  const total = worker + nonWorker;
-  document.getElementById(`manpowerTotal_${num}`).textContent = total.toLocaleString();
+  const total = mpVal("Worker", num) + mpVal("NonWorker", num);
+  document.getElementById(`manpowerTotal_${num}`).textContent = total > 0 ? total.toLocaleString() : "–";
+  updateManpowerAverages();
   return total;
+}
+
+// Average row: mean of the months that have a value (blank / 0 months are skipped).
+function updateManpowerAverages() {
+  const columns = {
+    Total: num => mpVal("Worker", num) + mpVal("NonWorker", num),
+    Worker: num => mpVal("Worker", num),
+    NonWorker: num => mpVal("NonWorker", num),
+    SewingOp: num => mpVal("SewingOp", num),
+    SewingHelper: num => mpVal("SewingHelper", num),
+    External: num => mpVal("External", num)
+  };
+  for (const [key, getter] of Object.entries(columns)) {
+    const vals = MONTHS.map(m => getter(m.num)).filter(v => v > 0);
+    const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+    document.getElementById(`manpowerAvg${key}`).textContent = fmtAvg(avg);
+  }
 }
 
 feedbackMonthTableBody.innerHTML = MONTHS.map(m => `
@@ -667,6 +695,9 @@ function loadManpowerYearTable() {
     const rec = reports[periodIdFor(year, m.num)] || {};
     document.getElementById(`manpowerWorker_${m.num}`).value = rec.workerManpower || "";
     document.getElementById(`manpowerNonWorker_${m.num}`).value = rec.nonWorkerManpower || "";
+    document.getElementById(`manpowerSewingOp_${m.num}`).value = rec.sewingOperatorManpower || "";
+    document.getElementById(`manpowerSewingHelper_${m.num}`).value = rec.sewingHelperManpower || "";
+    document.getElementById(`manpowerExternal_${m.num}`).value = rec.externalManpower || "";
     updateManpowerRowTotal(m.num);
   }
 }
@@ -687,12 +718,15 @@ saveManpowerYearBtn.addEventListener("click", async () => {
           period: periodLabelFor(year, m.name),
           workerManpower: workerVal,
           nonWorkerManpower: nonWorkerVal,
-          closingManpower: workerVal + nonWorkerVal
+          closingManpower: workerVal + nonWorkerVal,
+          sewingOperatorManpower: mpVal("SewingOp", m.num),
+          sewingHelperManpower: mpVal("SewingHelper", m.num),
+          externalManpower: mpVal("External", m.num)
         },
         { merge: true }
       );
     }));
-    showToast(`Saved Total Manpower for ${year}`);
+    showToast(`Saved Manpower for ${year}`);
     await fetchSiteReports(siteId);
     await refreshReportsList();
   } catch (err) {
