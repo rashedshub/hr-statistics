@@ -21,7 +21,6 @@ function setState(msg) {
     stateMsg.style.display = "none";
     topicsWrap.style.display = "grid";
   }
-  applyStage();
 }
 
 async function loadSites() {
@@ -75,23 +74,74 @@ function ytdSum(periodId, key) {
   return ids.reduce((sum, id) => sum + (Number(reportsById[id][key]) || 0), 0);
 }
 
-let manpowerPie = null;
-function drawManpowerPie(worker, nonWorker) {
-  const empty = worker + nonWorker === 0;
-  if (manpowerPie) manpowerPie.destroy();
-  manpowerPie = new Chart(document.getElementById("manpowerPie").getContext("2d"), {
+// ── Card chart helpers (shared look: dark/light blue, labels like the Excel prototype) ──
+const XL_FONT = "Carlito, Calibri, 'Segoe UI', Arial, sans-serif";
+const XL_DARK = "#3F63AE", XL_LIGHT = "#91A3D5", XL_TEXT = "#404040";
+Chart.register(ChartDataLabels);
+Chart.defaults.font.family = XL_FONT;
+const xlCharts = {};
+
+const setT = (id, text) => { document.getElementById(id).textContent = text; };
+const plain = n => String(Math.round(n * 10) / 10);   // lines read "W: 3000", like the prototype
+
+const xlFont = (ctx, ratio, min) => ({ size: Math.max(min, Math.round(ctx.chart.width * ratio)), weight: "400", family: XL_FONT });
+const xlPiePadding = (w, h) => ({ left: w * 0.24, right: w * 0.24, top: h * 0.07, bottom: h * 0.07 });
+
+// "Non-Worker (NW)" -> two lines, as in the prototype
+const xlLabelLines = s => { const p = String(s).split(" ("); return p.length > 1 ? [p[0], "(" + p.slice(1).join(" (")] : [String(s)]; };
+
+function drawXlPie(key, canvasId, labels, values) {
+  if (xlCharts[key]) xlCharts[key].destroy();
+  const canvas = document.getElementById(canvasId);
+  const empty = values.every(v => !(v > 0));
+  const box = canvas.parentElement.getBoundingClientRect();
+  xlCharts[key] = new Chart(canvas.getContext("2d"), {
     type: "pie",
     data: {
-      labels: ["Worker (W)", "Non-Worker (NW)"],
+      labels,
       datasets: [{
-        data: empty ? [1] : [worker, nonWorker],
-        backgroundColor: empty ? ["#E4E8EF"] : ["#2A56C6", "#9DB4EC"],
+        data: empty ? [1] : values,
+        backgroundColor: empty ? ["#E4E8EF"] : [XL_DARK, XL_LIGHT],
         borderWidth: 2, borderColor: "#fff"
       }]
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { display: false }, datalabels: { display: false }, tooltip: { enabled: !empty } }
+      layout: { padding: box.width ? xlPiePadding(box.width, box.height) : 8 },
+      onResize: (chart, size) => { chart.options.layout.padding = xlPiePadding(size.width, size.height); chart.update("none"); },
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: !empty },
+        datalabels: empty ? { display: false } : {
+          anchor: "end", align: "end", offset: 2, color: XL_TEXT, textAlign: "center",
+          font: ctx => xlFont(ctx, 0.075, 9),
+          formatter: (v, ctx) => v > 0 ? xlLabelLines(ctx.chart.data.labels[ctx.dataIndex]) : ""
+        }
+      }
+    }
+  });
+}
+
+function drawXlBars(key, canvasId, labels, datasets, { legend = false, valueLabels = false } = {}) {
+  if (xlCharts[key]) xlCharts[key].destroy();
+  xlCharts[key] = new Chart(document.getElementById(canvasId).getContext("2d"), {
+    type: "bar",
+    data: { labels, datasets: datasets.map(d => ({ borderRadius: 2, ...d })) },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 14 } },
+      plugins: {
+        legend: legend ? { position: "bottom", labels: { boxWidth: 9, boxHeight: 9, font: { size: 10 }, color: XL_TEXT } } : { display: false },
+        datalabels: valueLabels ? {
+          anchor: "end", align: ctx => (ctx.dataset.data[ctx.dataIndex] < 0 ? "bottom" : "top"),
+          color: XL_TEXT, font: ctx => xlFont(ctx, 0.05, 9),
+          formatter: v => v ? v.toLocaleString() : ""
+        } : { display: false }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: XL_TEXT, font: { size: 10 } } },
+        y: { display: false, beginAtZero: true }
+      }
     }
   });
 }
@@ -116,47 +166,102 @@ function shortageFor(rec) {
   const actTotal = actOp + actHelper;
   const has = stdTotal > 0 && actTotal > 0;
   return {
-    stdTotal, actTotal, has,
+    stdOp, stdHelper, actOp, actHelper, stdTotal, actTotal, has,
     opDiff: actOp - stdOp,
     helperDiff: actHelper - stdHelper,
     diff: actTotal - stdTotal
   };
 }
 
-function setBarWidth(barId, pct) {
-  const clamped = Math.max(0, Math.min(100, pct));
-  const bar = document.getElementById(barId);
-  requestAnimationFrame(() => { bar.style.width = `${clamped}%`; });
+// Sets a hero/line element's text and turns it red when the value is negative.
+function setSignedText(id, text, value) {
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.classList.toggle("negative", value !== null && value < 0);
 }
 
 function render(siteId, periodId) {
   const current = reportsById[periodId] || {};
+  const year = periodYear(periodId);
+  const upToNow = id => (!year || periodYear(id) === year) && id <= periodId;   // same year, through the selected month
+  const selectedMonthIdx = parseInt(periodId.slice(5, 7), 10) - 1;
 
-  // ── Leave Consumption ──────────────────────────────────────
+  // ── Manpower ─────────────────────────────────────────────────
+  const workerManpower = Number(current.workerManpower) || 0;
+  const nonWorkerManpower = Number(current.nonWorkerManpower) || 0;
+  const closingManpower = Number(current.closingManpower) || (workerManpower + nonWorkerManpower);
+  const ytdTotals = Object.keys(reportsById).filter(upToNow)
+    .map(id => Number(reportsById[id].closingManpower) || 0).filter(v => v > 0);
+  const ytdAvg = ytdTotals.length ? Math.round(ytdTotals.reduce((a, b) => a + b, 0) / ytdTotals.length) : 0;
+
+  setT("manpowerBigNum", closingManpower.toLocaleString());
+  setT("manpowerWorker", `W: ${plain(workerManpower)}`);
+  setT("manpowerNonWorker", `NW: ${plain(nonWorkerManpower)}`);
+  setT("manpowerYtdAvg", `YTD: ${ytdAvg.toLocaleString()}`);
+  drawXlPie("manpower", "manpowerPie", ["Worker (W)", "Non-Worker (NW)"], [workerManpower, nonWorkerManpower]);
+
+  // ── Direct Manpower (Indirect = Total − Direct) ───────────────
+  const directCount = Number(current.directManpower) || 0;
+  const indirectCount = closingManpower > 0 ? Math.max(closingManpower - directCount, 0) : 0;
+  const directPct = closingManpower > 0 && directCount > 0 ? Math.round((directCount / closingManpower) * 1000) / 10 : null;
+  const directPcts = Object.keys(reportsById).filter(upToNow).map(id => {
+    const r = reportsById[id];
+    const tot = Number(r.closingManpower) || 0, dir = Number(r.directManpower) || 0;
+    return tot > 0 && dir > 0 ? (dir / tot) * 100 : null;
+  }).filter(v => v !== null);
+  const directYtdAvg = directPcts.length ? Math.round((directPcts.reduce((a, b) => a + b, 0) / directPcts.length) * 10) / 10 : null;
+
+  setT("directBigPct", directPct === null ? "–" : `${directPct}%`);
+  setT("directLineDirect", `Direct: ${plain(directCount)}`);
+  setT("directLineIndirect", `Indirect: ${plain(indirectCount)}`);
+  setT("directYtdAvg", `YTD: ${directYtdAvg === null ? "–" : directYtdAvg + "%"}`);
+  drawXlPie("direct", "directChart", ["Direct", "Indirect"], [directCount, indirectCount]);
+
+  // ── Manpower Excess / (Shortage) — Sewing Worker (Operator + Helper) ─
+  const sf = shortageFor(current);
+  const shortageDiffs = Object.keys(reportsById).filter(upToNow)
+    .map(id => shortageFor(reportsById[id])).filter(r => r.has).map(r => r.diff);
+  const shortageYtdAvg = shortageDiffs.length ? Math.round(shortageDiffs.reduce((a, b) => a + b, 0) / shortageDiffs.length) : null;
+
+  setSignedText("shortageBigNum", sf.has ? fmtSigned(sf.diff) : "–", sf.has ? sf.diff : null);
+  setSignedText("shortageOperator", `Sewing Operator: ${sf.has ? fmtSigned(sf.opDiff) : "–"}`, sf.has ? sf.opDiff : null);
+  setSignedText("shortageHelper", `Sewing Helper: ${sf.has ? fmtSigned(sf.helperDiff) : "–"}`, sf.has ? sf.helperDiff : null);
+  setT("shortageYtdAvg", `YTD: ${fmtSigned(shortageYtdAvg)}`);
+  drawXlBars("shortage", "shortageChart", ["Operator", "Helper"], [
+    { label: "Standard", data: sf.has ? [sf.stdOp, sf.stdHelper] : [0, 0], backgroundColor: XL_LIGHT },
+    { label: "Actual", data: sf.has ? [sf.actOp, sf.actHelper] : [0, 0], backgroundColor: XL_DARK }
+  ], { legend: true, valueLabels: true });
+
+  // ── Leave Consumption ────────────────────────────────────────
   const totalElPlan = Number(current.totalElPlan) || 0;
   const monthElPlan = Number(current.monthElPlan) || 0;
   const monthElActual = Number(current.monthElActual) || 0;
   const ytdElActual = ytdSum(periodId, "monthElActual");
-
   const monthPct = monthElPlan > 0 ? Math.round((monthElActual / monthElPlan) * 1000) / 10 : 0;
   const ytdPct = totalElPlan > 0 ? Math.round((ytdElActual / totalElPlan) * 1000) / 10 : 0;
 
-  document.getElementById("leaveTotalPlan").textContent = totalElPlan.toLocaleString();
-  document.getElementById("leaveMonthActual").textContent = monthElActual.toLocaleString();
-  document.getElementById("leaveYtdActual").textContent = ytdElActual.toLocaleString();
-  setBar("leaveMonthBar", "leaveMonthPct", monthPct);
-  setBar("leaveYtdBar", "leaveYtdPct", ytdPct);
+  setT("leaveMonthPct", `${monthPct}%`);
+  setT("leaveActual", `Actual: ${plain(monthElActual)}`);
+  setT("leavePlan", `Plan: ${plain(monthElPlan)}`);
+  setT("leaveYtdPct", `YTD: ${ytdPct}%`);
+  drawXlPie("leave", "leaveChart", ["Consumed", "Balance"], [ytdElActual, Math.max(totalElPlan - ytdElActual, 0)]);
 
-  // ── Sick Leave ──────────────────────────────────────────────
+  // ── Sick Leave ───────────────────────────────────────────────
   const monthSickDays = Number(current.monthSickDays) || 0;
   const monthSickEmployees = Number(current.monthSickEmployees) || 0;
   const monthHeadcount = Number(current.monthHeadcount) || 0;
   const ytdSickDays = ytdSum(periodId, "monthSickDays");
   const sickPct = monthHeadcount > 0 ? Math.round((monthSickEmployees / monthHeadcount) * 1000) / 10 : 0;
 
-  document.getElementById("sickMonthDays").textContent = monthSickDays.toLocaleString();
-  document.getElementById("sickYtdDays").textContent = ytdSickDays.toLocaleString();
-  document.getElementById("sickPct").textContent = `${sickPct}%`;
+  setT("sickPct", `${sickPct}%`);
+  setT("sickDays", `Days: ${plain(monthSickDays)}`);
+  setT("sickEmployees", `Employees: ${plain(monthSickEmployees)}`);
+  setT("sickYtdDays", `YTD: ${ytdSickDays.toLocaleString()}`);
+  const sickSeries = buildMonthRows(periodId, ["monthSickDays"]).rows.map(r => r.monthSickDays);
+  drawXlBars("sick", "sickChart", ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"], [{
+    label: "Sick days", data: sickSeries,
+    backgroundColor: sickSeries.map((_, i) => i === selectedMonthIdx ? XL_DARK : XL_LIGHT)
+  }]);
 
   // ── Present % ────────────────────────────────────────────────
   const presentTotalEmployees = Number(current.presentTotalEmployees) || 0;
@@ -165,102 +270,42 @@ function render(siteId, periodId) {
   const presentSewingPresent = Number(current.presentSewingPresent) || 0;
   const presentOverallPct = presentTotalEmployees > 0 ? Math.round((presentTotalPresent / presentTotalEmployees) * 1000) / 10 : 0;
   const presentSewingPct = presentSewingTotal > 0 ? Math.round((presentSewingPresent / presentSewingTotal) * 1000) / 10 : 0;
+  const presentPcts = Object.keys(reportsById).filter(upToNow).map(id => {
+    const r = reportsById[id];
+    const emp = Number(r.presentTotalEmployees) || 0, pr = Number(r.presentTotalPresent) || 0;
+    return emp > 0 ? (pr / emp) * 100 : null;
+  }).filter(v => v !== null);
+  const presentYtdAvg = presentPcts.length ? Math.round((presentPcts.reduce((a, b) => a + b, 0) / presentPcts.length) * 10) / 10 : null;
 
-  document.getElementById("presentOverallPct").textContent = `${presentOverallPct}%`;
-  document.getElementById("presentTotalEmployees").textContent = presentTotalEmployees.toLocaleString();
-  document.getElementById("presentTotalPresent").textContent = presentTotalPresent.toLocaleString();
-  document.getElementById("presentSewingPct").textContent = `${presentSewingPct}%`;
-  document.getElementById("presentSewingPresent").textContent = presentSewingPresent.toLocaleString();
+  setT("presentOverallPct", `${presentOverallPct}%`);
+  setT("presentLinePresent", `Present: ${plain(presentTotalPresent)}`);
+  setT("presentSewingPct", `Sewing: ${presentSewingPct}%`);
+  setT("presentYtdAvg", `YTD: ${presentYtdAvg === null ? "–" : presentYtdAvg + "%"}`);
+  drawXlPie("present", "presentChart", ["Present", "Absent"], [presentTotalPresent, Math.max(presentTotalEmployees - presentTotalPresent, 0)]);
 
   // ── Injuries ─────────────────────────────────────────────────
   const injuriesTotalMonth = Number(current.injuriesTotal) || 0;
   const injuriesCriticalMonth = Number(current.injuriesCritical) || 0;
+  const injuriesOthers = Math.max(injuriesTotalMonth - injuriesCriticalMonth, 0);
   const injuriesYtdTotal = ytdSum(periodId, "injuriesTotal");
-  const injuriesYtdCritical = ytdSum(periodId, "injuriesCritical");
 
-  document.getElementById("injuriesTotalBigNum").textContent = injuriesTotalMonth.toLocaleString();
-  document.getElementById("injuriesYtdTotal").textContent = injuriesYtdTotal.toLocaleString();
-  document.getElementById("injuriesCriticalMonth").textContent = injuriesCriticalMonth.toLocaleString();
-  document.getElementById("injuriesYtdCritical").textContent = injuriesYtdCritical.toLocaleString();
+  setT("injuriesTotalBigNum", injuriesTotalMonth.toLocaleString());
+  setT("injuriesCriticalMonth", `Critical: ${plain(injuriesCriticalMonth)}`);
+  setT("injuriesOthers", `Others: ${plain(injuriesOthers)}`);
+  setT("injuriesYtdTotal", `YTD: ${injuriesYtdTotal.toLocaleString()}`);
+  drawXlPie("injuries", "injuriesChart", ["Critical", "Others"], [injuriesCriticalMonth, injuriesOthers]);
 
-  // ── Manpower ─────────────────────────────────────────────────
-  const workerManpower = Number(current.workerManpower) || 0;
-  const nonWorkerManpower = Number(current.nonWorkerManpower) || 0;
-  const closingManpower = Number(current.closingManpower) || (workerManpower + nonWorkerManpower);
-  const year = periodYear(periodId);
-  let ytdIds = Object.keys(reportsById);
-  if (year) ytdIds = ytdIds.filter(id => periodYear(id) === year);
-  ytdIds = ytdIds.filter(id => id <= periodId && Number(reportsById[id].closingManpower) > 0);
-  const ytdAvg = ytdIds.length
-    ? Math.round(ytdIds.reduce((sum, id) => sum + Number(reportsById[id].closingManpower), 0) / ytdIds.length)
-    : 0;
-
-  document.getElementById("manpowerWorker").textContent = workerManpower.toLocaleString();
-  document.getElementById("manpowerNonWorker").textContent = nonWorkerManpower.toLocaleString();
-  document.getElementById("manpowerYtdAvg").textContent = ytdAvg.toLocaleString();
-  document.getElementById("manpowerBigNum").textContent = closingManpower.toLocaleString();
-  drawManpowerPie(workerManpower, nonWorkerManpower);
-
-  // ── Direct Manpower ──────────────────────────────────────────
-  // Direct % = direct ÷ total (closing) manpower, so it depends on Total Manpower being entered.
-  const directCount = Number(current.directManpower) || 0;
-  const directPct = closingManpower > 0 ? Math.round((directCount / closingManpower) * 1000) / 10 : null;
-  const directPcts = Object.keys(reportsById)
-    .filter(id => (!year || periodYear(id) === year) && id <= periodId)
-    .map(id => {
-      const r = reportsById[id];
-      const tot = Number(r.closingManpower) || 0;
-      const dir = Number(r.directManpower) || 0;
-      return tot > 0 && dir > 0 ? (dir / tot) * 100 : null;
-    })
-    .filter(v => v !== null);
-  const directYtdAvg = directPcts.length
-    ? Math.round((directPcts.reduce((a, b) => a + b, 0) / directPcts.length) * 10) / 10
-    : null;
-
-  document.getElementById("directBigPct").textContent = directPct === null ? "–" : `${directPct}%`;
-  document.getElementById("directCount").textContent = directCount.toLocaleString();
-  document.getElementById("directTotal").textContent = closingManpower > 0 ? closingManpower.toLocaleString() : "–";
-  document.getElementById("directYtdAvg").textContent = directYtdAvg === null ? "–" : `${directYtdAvg}%`;
-  setBarWidth("directBar", directPct || 0);
-
-  // ── Manpower Excess / (Shortage) — Sewing Worker (Operator + Helper) ─
-  const sf = shortageFor(current);
-  const shortageDiffs = Object.keys(reportsById)
-    .filter(id => (!year || periodYear(id) === year) && id <= periodId)
-    .map(id => shortageFor(reportsById[id]))
-    .filter(r => r.has)
-    .map(r => r.diff);
-  const shortageYtdAvg = shortageDiffs.length
-    ? Math.round(shortageDiffs.reduce((a, b) => a + b, 0) / shortageDiffs.length)
-    : null;
-
-  const setSigned = (id, value) => {
-    const el = document.getElementById(id);
-    el.textContent = fmtSigned(value);
-    el.classList.toggle("negative", value !== null && value < 0);
-  };
-  setSigned("shortageBigNum", sf.has ? sf.diff : null);
-  setSigned("shortageOperator", sf.has ? sf.opDiff : null);
-  setSigned("shortageHelper", sf.has ? sf.helperDiff : null);
-  setSigned("shortageYtdAvg", shortageYtdAvg);
-  document.getElementById("shortageLabel").textContent =
-    !sf.has ? "Enter standard & actual in Admin"
-    : sf.diff < 0 ? "Shortage this month"
-    : sf.diff > 0 ? "Excess this month" : "On target this month";
-  document.getElementById("shortageStandard").textContent = sf.stdTotal > 0 ? sf.stdTotal.toLocaleString() : "–";
-  document.getElementById("shortageActual").textContent = sf.actTotal > 0 ? sf.actTotal.toLocaleString() : "–";
-
-  // ── Employees Feedback Received ─────────────────────────────
+  // ── Employees Feedback Received ──────────────────────────────
   const feedbackExternal = Number(current.feedbackExternal) || 0;
   const feedbackInternal = Number(current.feedbackInternal) || 0;
   const feedbackTotal = Number(current.feedbackTotal) || (feedbackExternal + feedbackInternal);
   const ytdFeedbackTotal = ytdSum(periodId, "feedbackTotal");
 
-  document.getElementById("feedbackExternal").textContent = feedbackExternal.toLocaleString();
-  document.getElementById("feedbackInternal").textContent = feedbackInternal.toLocaleString();
-  document.getElementById("feedbackYtdTotal").textContent = ytdFeedbackTotal.toLocaleString();
-  document.getElementById("feedbackBigNum").textContent = feedbackTotal.toLocaleString();
+  setT("feedbackBigNum", feedbackTotal.toLocaleString());
+  setT("feedbackExternal", `External: ${plain(feedbackExternal)}`);
+  setT("feedbackInternal", `Internal: ${plain(feedbackInternal)}`);
+  setT("feedbackYtdTotal", `YTD: ${ytdFeedbackTotal.toLocaleString()}`);
+  drawXlPie("feedback", "feedbackChart", ["External", "Internal"], [feedbackExternal, feedbackInternal]);
 
   syncUrl(siteId, periodId);
 }
@@ -281,25 +326,22 @@ async function loadDisciplinarySummary(siteId) {
 
   const deptData = data.disciplinaryDept || {};
   const departments = departmentsForSite(siteName);
-  let grandActions = 0, grandEmployees = 0;
+  let grandWorker = 0, grandNonWorker = 0, grandEmployees = 0;
   departments.forEach(d => {
     const v = deptData[d.key] || {};
-    grandActions += (Number(v.worker) || 0) + (Number(v.nonWorker) || 0);
+    grandWorker += Number(v.worker) || 0;
+    grandNonWorker += Number(v.nonWorker) || 0;
     grandEmployees += Number(v.employees) || 0;
   });
+  const grandActions = grandWorker + grandNonWorker;
   const grandPct = grandEmployees > 0 ? Math.round((grandActions / grandEmployees) * 1000) / 10 : 0;
 
-  document.getElementById("discGrandActions").textContent = grandActions.toLocaleString();
-  document.getElementById("discGrandPct").textContent = `${grandPct}%`;
-  document.getElementById("discPeriodLabel").textContent = data.periodLabel || "No summary period set yet";
-}
-
-function setBar(barId, labelId, pct) {
-  const clamped = Math.max(0, Math.min(100, pct));
-  const bar = document.getElementById(barId);
-  const label = document.getElementById(labelId);
-  label.textContent = `${pct}%`;
-  requestAnimationFrame(() => { bar.style.width = `${clamped}%`; });
+  setT("discGrandActions", grandActions.toLocaleString());
+  setT("discWorker", `W: ${plain(grandWorker)}`);
+  setT("discNonWorker", `NW: ${plain(grandNonWorker)}`);
+  setT("discGrandPct", `Overall: ${grandPct}%`);
+  setT("discPeriodLabel", data.periodLabel || "No summary period set yet");
+  drawXlPie("disc", "discChart", ["Worker (W)", "Non-Worker (NW)"], [grandWorker, grandNonWorker]);
 }
 
 // ── Reusable month-by-month detail modal ───────────────────
@@ -611,32 +653,8 @@ periodSelect.addEventListener("change", () => {
   render(currentSiteId, periodSelect.value);
 });
 
-// ── One-page "slide" view + full-screen presentation mode ────
-// The card grid is laid out on a fixed 1600x960 stage and scaled to fit the window,
-// so everything shows on one screen with no scrolling. Windows too small to read it
-// (or narrow phones) keep the normal scrolling layout — except in full screen, which
-// always uses the stage.
-const STAGE_W = 1600, STAGE_H = 960, STAGE_MARGIN = 12;
-const STAGE_MIN_SCALE = 0.62, STAGE_MAX_SCALE = 2.5, STAGE_MIN_WIDTH = 900;
-const topbarEl = document.querySelector(".hs-topbar");
+// ── Full-screen presentation mode ────────────────────────────
 const fullscreenBtn = document.getElementById("fullscreenBtn");
-
-function applyStage() {
-  const isFs = !!document.fullscreenElement;
-  document.body.classList.toggle("is-fullscreen", isFs);
-
-  const availW = window.innerWidth - STAGE_MARGIN * 2;
-  const availH = window.innerHeight - topbarEl.offsetHeight - STAGE_MARGIN * 2;
-  const scale = Math.min(availW / STAGE_W, availH / STAGE_H, STAGE_MAX_SCALE);
-  const useStage = window.innerWidth >= STAGE_MIN_WIDTH && (isFs || scale >= STAGE_MIN_SCALE);
-  document.body.classList.toggle("stage-mode", useStage);
-
-  if (useStage) {
-    const offset = STAGE_MARGIN + Math.max(0, (availH - STAGE_H * scale) / 2);
-    topicsWrap.style.setProperty("--stage-scale", scale.toFixed(4));
-    topicsWrap.style.setProperty("--stage-offset", `${offset.toFixed(1)}px`);
-  }
-}
 
 function toggleFullscreen() {
   if (!document.fullscreenElement) {
@@ -648,8 +666,9 @@ function toggleFullscreen() {
 
 if (!document.fullscreenEnabled) fullscreenBtn.style.display = "none";
 fullscreenBtn.addEventListener("click", toggleFullscreen);
-window.addEventListener("resize", applyStage);
-document.addEventListener("fullscreenchange", applyStage);
+document.addEventListener("fullscreenchange", () => {
+  document.body.classList.toggle("is-fullscreen", !!document.fullscreenElement);
+});
 document.addEventListener("keydown", (e) => {
   if (e.key !== "f" && e.key !== "F") return;
   if (e.ctrlKey || e.metaKey || e.altKey) return;

@@ -626,10 +626,7 @@ body{
 
 
 /* ─────────────────────────────────────────────────────────────
-   Present button + one-page "slide" view
-   The 3x3 card grid is laid out on a fixed 1600x960 stage and scaled to
-   fit the window (see applyStage() in app.js). Narrow or very small
-   windows fall back to the normal scrolling layout.
+   Present (full screen) button
 ───────────────────────────────────────────────────────────── */
 .hs-fs-btn{
   display:inline-flex;align-items:center;gap:6px;
@@ -648,47 +645,61 @@ body.is-fullscreen .hs-fs-btn .fs-label{display:none;}
 body.is-fullscreen .hs-topbar{padding:8px 24px;}
 body.is-fullscreen .hs-admin-link{display:none;}
 
-body.stage-mode{display:flex;flex-direction:column;height:100vh;overflow:hidden;}
-body.stage-mode .hs-topbar{position:static;flex:0 0 auto;}
-body.stage-mode main{flex:1 1 auto;min-height:0;overflow:hidden;display:flex;justify-content:center;}
-body.stage-mode .hs-panels{
-  width:1600px;height:960px;flex:0 0 auto;max-width:none;
-  margin:var(--stage-offset, 0) 0 0;padding:0;
-  grid-template-columns:repeat(3, 1fr);
-  grid-template-rows:repeat(3, 1fr);
-  gap:16px;align-items:stretch;
-  transform:scale(var(--stage-scale, 1));
-  transform-origin:top center;
-}
-/* compact card spacing so every card fits its slot on the stage */
-body.stage-mode .stat-panel{padding:14px 18px 12px;}
-body.stage-mode .stat-panel-header{margin-bottom:8px;}
-body.stage-mode .hero-figure{font-size:36px;}
-body.stage-mode .hero-label{margin-top:2px;}
-body.stage-mode .stat-divider{margin:8px 0;}
-body.stage-mode .stat-grid-2{gap:6px 16px;}
-body.stage-mode .mini-stat b{font-size:15px;}
-body.stage-mode .category-tag{margin-top:8px;padding:4px 10px;}
-body.stage-mode .progress-row{margin-bottom:2px;}
-body.stage-mode #leavePanel .stat-grid-2{margin-bottom:4px !important;}
-body.stage-mode #leavePanel .progress-row[style]{margin-top:6px !important;}
-body.stage-mode #directPanel .progress-track{margin-top:8px !important;}
-
-
-/* ── Manpower card (Excel prototype layout) ─────────────────── */
-.mp-body{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:2px;}
-.mp-split{margin-top:10px;font-size:13px;color:var(--ink-soft);display:flex;flex-direction:column;gap:4px;}
-.mp-split b{font-family:var(--font-display);font-size:14px;color:var(--ink);}
-.mp-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;}
-.mp-dot-w{background:#2A56C6;}
-.mp-dot-nw{background:#9DB4EC;}
-.mp-pie{width:96px;height:96px;flex:0 0 96px;position:relative;}
-.mp-ytd{text-align:right;margin-top:10px;font-size:13px;font-weight:600;color:var(--ink-soft);}
-.mp-ytd b{font-family:var(--font-display);font-size:18px;color:var(--ink);margin-left:4px;}
-body.stage-mode .mp-ytd{margin-top:6px;}
 
 /* ── Detail popup: wide variant + footer (Average) row ─────── */
 .modal-box.modal-wide{max-width:920px;}
 .detail-table tr.detail-footer-row td{
   font-weight:700;background:var(--canvas);border-top:2px solid var(--line);border-bottom:none;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Dashboard cards — one template, modelled on the Excel prototype.
+   Sizes are in cqw (container width) so every card keeps the same proportions
+   and font sizes at any width.
+───────────────────────────────────────────────────────────── */
+.hs-panels{
+  grid-template-columns:repeat(auto-fill, minmax(min(360px, 100%), 1fr));
+  gap:22px;
+  max-width:1500px;
+}
+body.is-fullscreen .hs-panels{max-width:1860px;}
+
+.xl-card{
+  container-type:inline-size;
+  display:flex;flex-direction:column;
+  aspect-ratio:665 / 360;
+  background:#fff;
+  border:1.5px solid #0070C0;
+  border-radius:0;
+  font-family:'Carlito','Calibri','Segoe UI',Arial,sans-serif;
+  color:#000;
+  text-decoration:none;
+  overflow:hidden;
+}
+.xl-card.clickable{cursor:pointer;transition:box-shadow .15s ease;}
+.xl-card.clickable:hover{box-shadow:0 6px 18px rgba(0,112,192,.25);}
+.xl-card:focus-visible{outline:2px solid #0070C0;outline-offset:2px;}
+
+.xl-title{
+  font-size:5.6cqw;font-weight:700;line-height:1.15;color:#000;
+  padding:3.2cqw 4cqw 1.2cqw;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.xl-rule{height:1px;background:#E00000;width:60%;}
+
+.xl-body{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:space-between;padding:1cqw 2cqw 0 4cqw;}
+.xl-main{flex:0 0 52%;min-width:0;}
+.xl-hero{font-size:13.5cqw;font-weight:700;line-height:1;color:#0070C0;white-space:nowrap;}
+.xl-hero.negative{color:#C00000;}
+.xl-lines{margin-top:1.6cqw;font-size:3.7cqw;font-weight:700;line-height:1.28;color:#7F7F7F;white-space:nowrap;}
+.xl-lines .negative{color:#C00000;}
+.xl-chart{flex:0 0 44cqw;height:28cqw;position:relative;}
+
+.xl-foot{display:flex;align-items:flex-end;justify-content:space-between;}
+.xl-foot-left{font-size:2.8cqw;font-weight:700;color:#7F7F7F;padding:0 0 1.8cqw 4cqw;}
+.xl-foot-right{
+  margin-left:auto;width:37.5%;
+  border-top:1px solid #E00000;
+  text-align:right;font-size:4.3cqw;font-weight:700;color:#595959;
+  padding:1.2cqw 3cqw 1.6cqw 0;white-space:nowrap;
 }

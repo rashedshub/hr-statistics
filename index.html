@@ -5,9 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HR Statistics Dashboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Carlito:wght@400;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
 </head>
 <body>
@@ -35,197 +36,166 @@
 
   <div id="topicsWrap" class="hs-panels" style="display:none;">
 
-    <!-- Manpower -->
-    <div class="stat-panel clickable-panel" id="manpowerPanel" tabindex="0" title="Click for month-by-month detail table">
-      <div class="stat-panel-header">
-        <span class="card-icon-badge"><i data-lucide="users"></i></span>
-        <span class="card-eyebrow">Manpower</span>
-        <span class="card-chevron"><i data-lucide="chevron-right"></i></span>
-      </div>
-
-      <div class="mp-body">
-        <div class="mp-left">
-          <div class="hero-figure tabular" id="manpowerBigNum">–</div>
-          <div class="mp-split">
-            <div><span class="mp-dot mp-dot-w"></span>W: <b class="tabular" id="manpowerWorker">–</b></div>
-            <div><span class="mp-dot mp-dot-nw"></span>NW: <b class="tabular" id="manpowerNonWorker">–</b></div>
+    <div class="xl-card clickable" id="manpowerPanel" tabindex="0" title="Click for month-by-month detail table">
+      <div class="xl-title">Manpower</div>
+      <div class="xl-rule"></div>
+      <div class="xl-body">
+        <div class="xl-main">
+          <div class="xl-hero tabular" id="manpowerBigNum">–</div>
+          <div class="xl-lines">
+          <div id="manpowerWorker">W: –</div>
+          <div id="manpowerNonWorker">NW: –</div>
           </div>
         </div>
-        <div class="mp-pie"><canvas id="manpowerPie"></canvas></div>
+        <div class="xl-chart"><canvas id="manpowerPie"></canvas></div>
       </div>
-
-      <div class="mp-ytd" title="Year-to-date average of the monthly total">YTD: <b class="tabular" id="manpowerYtdAvg">–</b></div>
-    </div>
-
-    <!-- Direct Manpower -->
-    <div class="stat-panel clickable-panel" id="directPanel" tabindex="0" title="Click for month-by-month detail">
-      <div class="stat-panel-header">
-        <span class="card-icon-badge"><i data-lucide="user-check"></i></span>
-        <span class="card-eyebrow">Direct Manpower</span>
-        <span class="card-chevron"><i data-lucide="chevron-right"></i></span>
-      </div>
-
-      <div class="hero-figure tabular" id="directBigPct">–</div>
-      <div class="hero-label">Direct share of total manpower, this month</div>
-
-      <div class="progress-track" style="margin-top:12px;"><div class="progress-fill" id="directBar" style="width:0%;"></div></div>
-
-      <div class="stat-divider"></div>
-
-      <div class="stat-grid-2">
-        <div class="mini-stat"><span>Direct manpower</span><b class="tabular" id="directCount">–</b></div>
-        <div class="mini-stat"><span>Total manpower</span><b class="tabular" id="directTotal">–</b></div>
-        <div class="mini-stat" style="grid-column:1/-1;"><span>YTD average %</span><b class="tabular" id="directYtdAvg">–</b></div>
+      <div class="xl-foot">
+      <div class="xl-foot-left"></div>
+        <div class="xl-foot-right" id="manpowerYtdAvg">YTD: –</div>
       </div>
     </div>
-
-    <!-- Manpower Excess / (Shortage) — Sewing Worker (Operator & Helper) -->
-    <div class="stat-panel clickable-panel" id="shortagePanel" tabindex="0" title="Click for month-by-month detail">
-      <div class="stat-panel-header">
-        <span class="card-icon-badge"><i data-lucide="shield-alert"></i></span>
-        <span class="card-eyebrow">Manpower Excess / (Shortage)</span>
-        <span class="card-chevron"><i data-lucide="chevron-right"></i></span>
+    <div class="xl-card clickable" id="directPanel" tabindex="0" title="Click for month-by-month detail table">
+      <div class="xl-title">Direct Manpower</div>
+      <div class="xl-rule"></div>
+      <div class="xl-body">
+        <div class="xl-main">
+          <div class="xl-hero tabular" id="directBigPct">–</div>
+          <div class="xl-lines">
+          <div id="directLineDirect">Direct: –</div>
+          <div id="directLineIndirect">Indirect: –</div>
+          </div>
+        </div>
+        <div class="xl-chart"><canvas id="directChart"></canvas></div>
       </div>
-
-      <div class="hero-figure tabular" id="shortageBigNum">–</div>
-      <div class="hero-label" id="shortageLabel">Actual minus standard, this month</div>
-
-      <div class="stat-divider"></div>
-
-      <div class="stat-grid-2">
-        <div class="mini-stat"><span>Operator</span><b class="tabular" id="shortageOperator">–</b></div>
-        <div class="mini-stat"><span>Helper</span><b class="tabular" id="shortageHelper">–</b></div>
-        <div class="mini-stat"><span>Standard manpower</span><b class="tabular" id="shortageStandard">–</b></div>
-        <div class="mini-stat"><span>Actual manpower</span><b class="tabular" id="shortageActual">–</b></div>
-        <div class="mini-stat" style="grid-column:1/-1;"><span>YTD average</span><b class="tabular" id="shortageYtdAvg">–</b></div>
-      </div>
-
-      <div class="category-tag"><b>Sewing Worker</b> – Operator &amp; Helper</div>
-    </div>
-
-    <!-- Leave Consumption -->
-    <div class="stat-panel clickable-panel" id="leavePanel" tabindex="0" title="Click for month-by-month detail">
-      <div class="stat-panel-header">
-        <span class="card-icon-badge"><i data-lucide="calendar-clock"></i></span>
-        <span class="card-eyebrow">Leave Consumption</span>
-        <span class="card-chevron"><i data-lucide="chevron-right"></i></span>
-      </div>
-
-      <div class="stat-grid-2" style="margin-bottom:16px;">
-        <div class="mini-stat"><span>Total EL (Plan)</span><b class="tabular" id="leaveTotalPlan">–</b></div>
-        <div class="mini-stat"><span>This month actual</span><b class="tabular" id="leaveMonthActual">–</b></div>
-        <div class="mini-stat" style="grid-column:1/-1;"><span>YTD actual</span><b class="tabular" id="leaveYtdActual">–</b></div>
-      </div>
-
-      <div class="stat-divider"></div>
-
-      <div class="progress-row"><span>This month vs plan</span><b class="tabular" id="leaveMonthPct">0%</b></div>
-      <div class="progress-track"><div class="progress-fill" id="leaveMonthBar" style="width:0%;"></div></div>
-
-      <div class="progress-row" style="margin-top:12px;"><span>Year-to-date vs plan</span><b class="tabular" id="leaveYtdPct">0%</b></div>
-      <div class="progress-track"><div class="progress-fill" id="leaveYtdBar" style="width:0%;"></div></div>
-
-      <div class="category-tag"><b>Non-Worker</b> – Asst. Officer to above level</div>
-    </div>
-
-    <!-- Sick Leave -->
-    <div class="stat-panel clickable-panel" id="sickPanel" tabindex="0" title="Click for month-by-month detail">
-      <div class="stat-panel-header">
-        <span class="card-icon-badge"><i data-lucide="thermometer"></i></span>
-        <span class="card-eyebrow">Sick Leave</span>
-        <span class="card-chevron"><i data-lucide="chevron-right"></i></span>
-      </div>
-
-      <div class="hero-figure tabular" id="sickPct" style="color:var(--accent);">0%</div>
-      <div class="hero-label">Employees on sick leave this month</div>
-
-      <div class="stat-divider"></div>
-
-      <div class="stat-grid-2">
-        <div class="mini-stat"><span>Sick days this month</span><b class="tabular" id="sickMonthDays">–</b></div>
-        <div class="mini-stat"><span>Sick days YTD</span><b class="tabular" id="sickYtdDays">–</b></div>
-      </div>
-
-      <div class="category-tag"><b>Worker</b> – Sewing (Operator)</div>
-    </div>
-
-    <!-- Present % -->
-    <div class="stat-panel clickable-panel" id="presentPanel" tabindex="0" title="Click for month-by-month detail">
-      <div class="stat-panel-header">
-        <span class="card-icon-badge"><i data-lucide="user-round-check"></i></span>
-        <span class="card-eyebrow">Present %</span>
-        <span class="card-chevron"><i data-lucide="chevron-right"></i></span>
-      </div>
-
-      <div class="hero-figure tabular" id="presentOverallPct">–</div>
-      <div class="hero-label">Present, all employees</div>
-
-      <div class="stat-divider"></div>
-
-      <div class="stat-grid-2">
-        <div class="mini-stat"><span>Total employees</span><b class="tabular" id="presentTotalEmployees">–</b></div>
-        <div class="mini-stat"><span>Present</span><b class="tabular" id="presentTotalPresent">–</b></div>
-        <div class="mini-stat"><span>Sewing worker %</span><b class="tabular" id="presentSewingPct">–</b></div>
-        <div class="mini-stat"><span>Sewing present</span><b class="tabular" id="presentSewingPresent">–</b></div>
+      <div class="xl-foot">
+      <div class="xl-foot-left"></div>
+        <div class="xl-foot-right" id="directYtdAvg">YTD: –</div>
       </div>
     </div>
-
-    <!-- Injuries -->
-    <div class="stat-panel clickable-panel" id="injuriesPanel" tabindex="0" title="Click for month-by-month detail">
-      <div class="stat-panel-header">
-        <span class="card-icon-badge"><i data-lucide="user-round-x"></i></span>
-        <span class="card-eyebrow">Injuries</span>
-        <span class="card-chevron"><i data-lucide="chevron-right"></i></span>
+    <div class="xl-card clickable" id="shortagePanel" tabindex="0" title="Click for month-by-month detail table">
+      <div class="xl-title">Manpower Excess / (Shortage)</div>
+      <div class="xl-rule"></div>
+      <div class="xl-body">
+        <div class="xl-main">
+          <div class="xl-hero tabular" id="shortageBigNum">–</div>
+          <div class="xl-lines">
+          <div id="shortageOperator">Sewing Operator: –</div>
+          <div id="shortageHelper">Sewing Helper: –</div>
+          </div>
+        </div>
+        <div class="xl-chart"><canvas id="shortageChart"></canvas></div>
       </div>
-
-      <div class="hero-figure tabular" id="injuriesTotalBigNum">–</div>
-      <div class="hero-label">This month, total injuries</div>
-
-      <div class="stat-divider"></div>
-
-      <div class="stat-grid-2">
-        <div class="mini-stat"><span>YTD total</span><b class="tabular" id="injuriesYtdTotal">–</b></div>
-        <div class="mini-stat"><span>Critical (this month)</span><b class="tabular" id="injuriesCriticalMonth">–</b></div>
-        <div class="mini-stat" style="grid-column:1/-1;"><span>Critical YTD</span><b class="tabular" id="injuriesYtdCritical">–</b></div>
+      <div class="xl-foot">
+      <div class="xl-foot-left"></div>
+        <div class="xl-foot-right" id="shortageYtdAvg">YTD: –</div>
       </div>
     </div>
-
-    <!-- Employees Feedback Received -->
-    <div class="stat-panel clickable-panel" id="feedbackPanel" tabindex="0" title="Click for month-by-month detail">
-      <div class="stat-panel-header">
-        <span class="card-icon-badge"><i data-lucide="message-circle"></i></span>
-        <span class="card-eyebrow">Employees Feedback Received</span>
-        <span class="card-chevron"><i data-lucide="chevron-right"></i></span>
+    <div class="xl-card clickable" id="leavePanel" tabindex="0" title="Click for month-by-month detail table">
+      <div class="xl-title">Leave Consumption</div>
+      <div class="xl-rule"></div>
+      <div class="xl-body">
+        <div class="xl-main">
+          <div class="xl-hero tabular" id="leaveMonthPct">–</div>
+          <div class="xl-lines">
+          <div id="leaveActual">Actual: –</div>
+          <div id="leavePlan">Plan: –</div>
+          </div>
+        </div>
+        <div class="xl-chart"><canvas id="leaveChart"></canvas></div>
       </div>
-
-      <div class="hero-figure tabular" id="feedbackBigNum">–</div>
-      <div class="hero-label">This month, total feedback received</div>
-
-      <div class="stat-divider"></div>
-
-      <div class="stat-grid-2">
-        <div class="mini-stat"><span>External</span><b class="tabular" id="feedbackExternal">–</b></div>
-        <div class="mini-stat"><span>Internal</span><b class="tabular" id="feedbackInternal">–</b></div>
-        <div class="mini-stat" style="grid-column:1/-1;"><span>YTD total</span><b class="tabular" id="feedbackYtdTotal">–</b></div>
+      <div class="xl-foot">
+      <div class="xl-foot-left"></div>
+        <div class="xl-foot-right" id="leaveYtdPct">YTD: –</div>
       </div>
     </div>
-
-    <!-- Disciplinary Action — summary + link to its own report page -->
-    <a class="stat-panel clickable-panel disc-nav-card" id="disciplinaryLink" href="disciplinary.html" style="--accent:var(--cyan);">
-      <div class="stat-panel-header">
-        <span class="card-icon-badge"><i data-lucide="scale"></i></span>
-        <span class="card-eyebrow">Disciplinary Action</span>
-        <span class="card-chevron"><i data-lucide="arrow-up-right"></i></span>
+    <div class="xl-card clickable" id="sickPanel" tabindex="0" title="Click for month-by-month detail table">
+      <div class="xl-title">Sick Leave</div>
+      <div class="xl-rule"></div>
+      <div class="xl-body">
+        <div class="xl-main">
+          <div class="xl-hero tabular" id="sickPct">–</div>
+          <div class="xl-lines">
+          <div id="sickDays">Days: –</div>
+          <div id="sickEmployees">Employees: –</div>
+          </div>
+        </div>
+        <div class="xl-chart"><canvas id="sickChart"></canvas></div>
       </div>
-
-      <div class="hero-figure tabular" id="discGrandActions">–</div>
-      <div class="hero-label" id="discPeriodLabel">No summary period set yet</div>
-
-      <div class="stat-divider"></div>
-
-      <div class="stat-grid-2">
-        <div class="mini-stat"><span>Overall %</span><b class="tabular" id="discGrandPct">–</b></div>
-        <div class="mini-stat"><span>Full breakdown</span><b>By function &amp; type →</b></div>
+      <div class="xl-foot">
+      <div class="xl-foot-left"></div>
+        <div class="xl-foot-right" id="sickYtdDays">YTD: –</div>
+      </div>
+    </div>
+    <div class="xl-card clickable" id="presentPanel" tabindex="0" title="Click for month-by-month detail table">
+      <div class="xl-title">Present %</div>
+      <div class="xl-rule"></div>
+      <div class="xl-body">
+        <div class="xl-main">
+          <div class="xl-hero tabular" id="presentOverallPct">–</div>
+          <div class="xl-lines">
+          <div id="presentLinePresent">Present: –</div>
+          <div id="presentSewingPct">Sewing: –</div>
+          </div>
+        </div>
+        <div class="xl-chart"><canvas id="presentChart"></canvas></div>
+      </div>
+      <div class="xl-foot">
+      <div class="xl-foot-left"></div>
+        <div class="xl-foot-right" id="presentYtdAvg">YTD: –</div>
+      </div>
+    </div>
+    <div class="xl-card clickable" id="injuriesPanel" tabindex="0" title="Click for month-by-month detail table">
+      <div class="xl-title">Injuries</div>
+      <div class="xl-rule"></div>
+      <div class="xl-body">
+        <div class="xl-main">
+          <div class="xl-hero tabular" id="injuriesTotalBigNum">–</div>
+          <div class="xl-lines">
+          <div id="injuriesCriticalMonth">Critical: –</div>
+          <div id="injuriesOthers">Others: –</div>
+          </div>
+        </div>
+        <div class="xl-chart"><canvas id="injuriesChart"></canvas></div>
+      </div>
+      <div class="xl-foot">
+      <div class="xl-foot-left"></div>
+        <div class="xl-foot-right" id="injuriesYtdTotal">YTD: –</div>
+      </div>
+    </div>
+    <div class="xl-card clickable" id="feedbackPanel" tabindex="0" title="Click for month-by-month detail table">
+      <div class="xl-title">Employees Feedback Received</div>
+      <div class="xl-rule"></div>
+      <div class="xl-body">
+        <div class="xl-main">
+          <div class="xl-hero tabular" id="feedbackBigNum">–</div>
+          <div class="xl-lines">
+          <div id="feedbackExternal">External: –</div>
+          <div id="feedbackInternal">Internal: –</div>
+          </div>
+        </div>
+        <div class="xl-chart"><canvas id="feedbackChart"></canvas></div>
+      </div>
+      <div class="xl-foot">
+      <div class="xl-foot-left"></div>
+        <div class="xl-foot-right" id="feedbackYtdTotal">YTD: –</div>
+      </div>
+    </div>
+    <a class="xl-card clickable" id="disciplinaryLink" href="disciplinary.html" title="Open the full Disciplinary Action page">
+      <div class="xl-title">Disciplinary Action</div>
+      <div class="xl-rule"></div>
+      <div class="xl-body">
+        <div class="xl-main">
+          <div class="xl-hero tabular" id="discGrandActions">–</div>
+          <div class="xl-lines">
+          <div id="discWorker">W: –</div>
+          <div id="discNonWorker">NW: –</div>
+          </div>
+        </div>
+        <div class="xl-chart"><canvas id="discChart"></canvas></div>
+      </div>
+      <div class="xl-foot">
+      <div class="xl-foot-left" id="discPeriodLabel"></div>
+        <div class="xl-foot-right" id="discGrandPct">Overall: –</div>
       </div>
     </a>
 
