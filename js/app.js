@@ -84,8 +84,10 @@ const xlCharts = {};
 const setT = (id, text) => { document.getElementById(id).textContent = text; };
 const plain = n => String(Math.round(n * 10) / 10);   // lines read "W: 3000", like the prototype
 
-const xlFont = (ctx, ratio, min) => ({ size: Math.max(min, Math.round(ctx.chart.width * ratio)), weight: "400", family: XL_FONT });
-const xlPiePadding = (w, h) => ({ left: w * 0.24, right: w * 0.24, top: h * 0.07, bottom: h * 0.07 });
+const xlFont = (ctx, ratio, min, max = 14) => ({ size: Math.min(max, Math.max(min, Math.round(ctx.chart.width * ratio))), weight: "400", family: XL_FONT });
+const xlPiePadding = (w, h) => ({ left: w * 0.17, right: w * 0.17, top: h * 0.15, bottom: h * 0.15 });
+// Recomputes the pie's room for its labels on every layout pass, so it is right at any card size.
+const xlPiePadPlugin = { id: "xlPiePad", beforeLayout(chart) { chart.options.layout.padding = xlPiePadding(chart.width, chart.height); } };
 
 // "Non-Worker (NW)" -> two lines, as in the prototype
 const xlLabelLines = s => { const p = String(s).split(" ("); return p.length > 1 ? [p[0], "(" + p.slice(1).join(" (")] : [String(s)]; };
@@ -94,8 +96,8 @@ function drawXlPie(key, canvasId, labels, values) {
   if (xlCharts[key]) xlCharts[key].destroy();
   const canvas = document.getElementById(canvasId);
   const empty = values.every(v => !(v > 0));
-  const box = canvas.parentElement.getBoundingClientRect();
   xlCharts[key] = new Chart(canvas.getContext("2d"), {
+    plugins: [xlPiePadPlugin],
     type: "pie",
     data: {
       labels,
@@ -107,14 +109,15 @@ function drawXlPie(key, canvasId, labels, values) {
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      layout: { padding: box.width ? xlPiePadding(box.width, box.height) : 8 },
-      onResize: (chart, size) => { chart.options.layout.padding = xlPiePadding(size.width, size.height); chart.update("none"); },
+      layout: { padding: 0 },
       plugins: {
         legend: { display: false },
         tooltip: { enabled: !empty },
         datalabels: empty ? { display: false } : {
           anchor: "end", align: "end", offset: 2, color: XL_TEXT, textAlign: "center",
-          font: ctx => xlFont(ctx, 0.075, 9),
+          clamp: true, clip: false,   // keep every label fully inside the chart, never cut off
+          backgroundColor: "rgba(255,255,255,0.88)", borderRadius: 3, padding: { top: 1, bottom: 1, left: 3, right: 3 },
+          font: ctx => xlFont(ctx, 0.05, 9),
           formatter: (v, ctx) => v > 0 ? xlLabelLines(ctx.chart.data.labels[ctx.dataIndex]) : ""
         }
       }
@@ -134,13 +137,14 @@ function drawXlBars(key, canvasId, labels, datasets, { legend = false, valueLabe
         legend: legend ? { position: "bottom", labels: { boxWidth: 9, boxHeight: 9, font: { size: 10 }, color: XL_TEXT } } : { display: false },
         datalabels: valueLabels ? {
           anchor: "end", align: ctx => (ctx.dataset.data[ctx.dataIndex] < 0 ? "bottom" : "top"),
+          clamp: true, clip: false,
           color: XL_TEXT, font: ctx => xlFont(ctx, 0.05, 9),
           formatter: v => v ? v.toLocaleString() : ""
         } : { display: false }
       },
       scales: {
         x: { grid: { display: false }, ticks: { color: XL_TEXT, font: { size: 10 } } },
-        y: { display: false, beginAtZero: true }
+        y: { display: false, beginAtZero: true, grace: "22%" }   // headroom so the value labels are not cut off
       }
     }
   });

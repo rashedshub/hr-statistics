@@ -693,7 +693,8 @@ body.is-fullscreen .hs-panels{max-width:1860px;}
 .xl-hero.negative{color:#C00000;}
 .xl-lines{margin-top:1.6cqw;font-size:3.7cqw;font-weight:700;line-height:1.28;color:#7F7F7F;white-space:nowrap;}
 .xl-lines .negative{color:#C00000;}
-.xl-chart{flex:0 0 44cqw;height:28cqw;position:relative;}
+.xl-chart{flex:0 0 44cqw;min-width:0;height:28cqw;position:relative;overflow:hidden;}
+.xl-chart canvas{position:absolute;top:0;left:0;}
 
 .xl-foot{display:flex;align-items:flex-end;justify-content:space-between;}
 .xl-foot-left{font-size:2.8cqw;font-weight:700;color:#7F7F7F;padding:0 0 1.8cqw 4cqw;}
