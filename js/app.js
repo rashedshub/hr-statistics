@@ -1,4 +1,4 @@
-import { departmentsForSite } from "./schema.js";
+import { departmentsForSite, DEFAULT_DEPARTMENTS } from "./schema.js";
 import { db, periodYear, pickDefaultPeriod, escapeHtml, loadSitesList, fetchSiteReportsMap } from "./dashboard-shared.js";
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -125,7 +125,7 @@ function drawXlPie(key, canvasId, labels, values) {
   });
 }
 
-function drawXlBars(key, canvasId, labels, datasets, { legend = false, valueLabels = false } = {}) {
+function drawXlBars(key, canvasId, labels, datasets, { legend = false, valueLabels = false, suffix = "" } = {}) {
   if (xlCharts[key]) xlCharts[key].destroy();
   xlCharts[key] = new Chart(document.getElementById(canvasId).getContext("2d"), {
     type: "bar",
@@ -139,7 +139,7 @@ function drawXlBars(key, canvasId, labels, datasets, { legend = false, valueLabe
           anchor: "end", align: ctx => (ctx.dataset.data[ctx.dataIndex] < 0 ? "bottom" : "top"),
           clamp: true, clip: false,
           color: XL_TEXT, font: ctx => xlFont(ctx, 0.05, 9),
-          formatter: v => v ? v.toLocaleString() : ""
+          formatter: v => v ? v.toLocaleString() + suffix : ""
         } : { display: false }
       },
       scales: {
@@ -183,6 +183,24 @@ function setSignedText(id, text, value) {
   el.textContent = text;
   el.classList.toggle("negative", value !== null && value < 0);
 }
+
+// NW EL (Non-Worker, Asst. Officer to above): Planned / Enjoyed per department, summed over the given report ids.
+const NW_DEPT_SHORT = { accounting: "A&F", administration: "Adm", commercial: "Com", hr: "HR", production: "Prod", quality: "Qual", sales: "Sales" };
+function nwElTotals(ids) {
+  const perDept = {};
+  DEFAULT_DEPARTMENTS.forEach(d => { perDept[d.key] = { p: 0, e: 0 }; });
+  ids.forEach(id => {
+    const map = (reportsById[id] || {}).nwElDept || {};
+    DEFAULT_DEPARTMENTS.forEach(d => {
+      perDept[d.key].p += Number((map[d.key] || {}).planned) || 0;
+      perDept[d.key].e += Number((map[d.key] || {}).enjoyed) || 0;
+    });
+  });
+  const p = Object.values(perDept).reduce((a, v) => a + v.p, 0);
+  const e = Object.values(perDept).reduce((a, v) => a + v.e, 0);
+  return { perDept, p, e };
+}
+const nwPct = (e, p) => (p > 0 ? Math.round((e / p) * 100) : 0);
 
 function render(siteId, periodId) {
   const current = reportsById[periodId] || {};
@@ -249,6 +267,19 @@ function render(siteId, periodId) {
   setT("leavePlan", `Plan: ${plain(monthElPlan)}`);
   setT("leaveYtdPct", `YTD: ${ytdPct}%`);
   drawXlPie("leave", "leaveChart", ["Consumed", "Balance"], [ytdElActual, Math.max(totalElPlan - ytdElActual, 0)]);
+
+  // ── NW EL Plan vs Consumption (YTD through the selected month; department-wise bars) ──
+  const nwYtd = nwElTotals(Object.keys(reportsById).filter(upToNow));
+  const nwMonth = nwElTotals([periodId]);
+  setT("nwElBigPct", `${nwPct(nwYtd.e, nwYtd.p)}%`);
+  setT("nwElPlanned", `Planned: ${plain(nwYtd.p)}`);
+  setT("nwElEnjoyed", `Enjoyed: ${plain(nwYtd.e)}`);
+  setT("nwElMonthPct", `Month: ${nwPct(nwMonth.e, nwMonth.p)}%`);
+  drawXlBars("nwEl", "nwElChart", DEFAULT_DEPARTMENTS.map(d => NW_DEPT_SHORT[d.key] || d.name), [{
+    label: "% enjoyed vs planned",
+    data: DEFAULT_DEPARTMENTS.map(d => nwPct(nwYtd.perDept[d.key].e, nwYtd.perDept[d.key].p)),
+    backgroundColor: XL_DARK
+  }], { valueLabels: true, suffix: "%" });
 
   // ── Sick Leave ───────────────────────────────────────────────
   const monthSickDays = Number(current.monthSickDays) || 0;
@@ -388,6 +419,13 @@ function buildMonthRows(periodId, fieldKeys) {
 function openDetailModal(config) {
   detailModalTitle.textContent = config.title;
 
+  const detailTable = detailModalTableHead.parentElement;
+  detailTable.classList.toggle("detail-table-wide", !!config.tableHtml);
+
+  if (config.tableHtml) {
+    detailModalTableHead.innerHTML = config.tableHtml.head;
+    detailModalTableBody.innerHTML = config.tableHtml.body;
+  } else {
   const headCells = ["Month", ...config.columns.map(c => c.label)];
   detailModalTableHead.innerHTML = `<tr>${headCells.map(h => `<th>${h}</th>`).join("")}</tr>`;
 
@@ -404,7 +442,10 @@ function openDetailModal(config) {
     detailModalTableBody.innerHTML += `<tr class="detail-footer-row"><td>${config.footer.label}</td>${
       config.footer.cells.map(c => `<td>${c}</td>`).join("")}</tr>`;
   }
-  detailModal.querySelector(".modal-box").classList.toggle("modal-wide", !!config.wide);
+  }
+  const modalBox = detailModal.querySelector(".modal-box");
+  modalBox.classList.toggle("modal-wide", !!config.wide);
+  modalBox.classList.toggle("modal-xwide", config.wide === "xl");
 
   const ctx = document.getElementById("detailModalChart").getContext("2d");
   if (detailChart) detailChart.destroy();
@@ -454,6 +495,46 @@ leavePanel.addEventListener("click", () => {
       { key: "monthElActual", label: "Actual", color: "#3b6fae" }
     ],
     chartType: "bar"
+  });
+});
+
+// ── NW EL Plan vs Consumption detail (department-wise, like the Excel entry sheet) ──
+const nwElPanel = document.getElementById("nwElPanel");
+nwElPanel.addEventListener("click", () => {
+  const year = periodYear(periodSelect.value);
+  const siteName = sites.find(s => s.id === currentSiteId)?.name || "";
+  const fmt = n => (n > 0 ? (Math.round(n * 10) / 10).toLocaleString() : "–");
+  const pct = (e, p) => (p > 0 ? `${Math.round((e / p) * 100)}%` : "–");
+
+  const monthIds = MONTH_NAMES.map((_, i) => (year ? `${year}-${String(i + 1).padStart(2, "0")}` : null));
+  const monthRows = MONTH_NAMES.map((name, i) => ({ name, ...nwElTotals(monthIds[i] && reportsById[monthIds[i]] ? [monthIds[i]] : []) }));
+  const yearTotal = nwElTotals(monthIds.filter(id => id && reportsById[id]));
+
+  const trio = (p, e) => `<td class="gstart">${fmt(p)}</td><td>${fmt(e)}</td><td class="pct">${pct(e, p)}</td>`;
+  const head = `
+    <tr>
+      <th rowspan="2" class="sticky-col">Month</th>
+      <th colspan="3" class="grp grp-total">${escapeHtml(siteName)} Total</th>
+      ${DEFAULT_DEPARTMENTS.map(d => `<th colspan="3" class="grp">${escapeHtml(d.name)}</th>`).join("")}
+    </tr>
+    <tr>${Array(DEFAULT_DEPARTMENTS.length + 1).fill('<th class="gstart">Planned</th><th>Enjoyed</th><th>%</th>').join("")}</tr>`;
+  const line = (label, t, cls = "") => `
+    <tr${cls}>
+      <td class="sticky-col">${label}</td>${trio(t.p, t.e)}
+      ${DEFAULT_DEPARTMENTS.map(d => trio(t.perDept[d.key].p, t.perDept[d.key].e)).join("")}
+    </tr>`;
+  const body = monthRows.map(r => line(r.name, r)).join("") + line("Total", yearTotal, ' class="detail-footer-row"');
+
+  openDetailModal({
+    title: `NW EL Plan vs Consumption — ${siteName}${year ? " " + year : ""}`,
+    rows: monthRows.map(r => ({ label: r.name, hasData: r.p > 0 || r.e > 0, planned: r.p, enjoyed: r.e })),
+    datasets: [
+      { key: "planned", label: "Planned", color: "#91A3D5" },
+      { key: "enjoyed", label: "Enjoyed", color: "#3F63AE" }
+    ],
+    chartType: "bar",
+    wide: "xl",
+    tableHtml: { head, body }
   });
 });
 

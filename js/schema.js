@@ -34,6 +34,18 @@ export const TOPICS = [
     ]
   },
   {
+    id: "nwEl",
+    title: "NW EL Plan vs Consumption",
+    icon: "calendar-check",
+    enabled: true,
+    customAdminUI: true, // own department-wise yearly table in admin.js; stored as nwElDept in the monthly report
+    fields: [
+      { key: "nwElDept", label: "Per department: { planned, enjoyed } (Non-Worker, Asst. Officer to above)", type: "map" },
+      { key: "nwElPlannedTotal", label: "Planned, all departments (derived)", type: "number" },
+      { key: "nwElEnjoyedTotal", label: "Enjoyed, all departments (derived)", type: "number" }
+    ]
+  },
+  {
     id: "sickLeave",
     title: "Sick Leave",
     icon: "thermometer",

@@ -704,3 +704,29 @@ body.is-fullscreen .hs-panels{max-width:1860px;}
   text-align:right;font-size:4.3cqw;font-weight:700;color:#595959;
   padding:1.2cqw 3cqw 1.6cqw 0;white-space:nowrap;
 }
+
+
+/* ── NW EL Plan vs Consumption: department-wise tables (entry + detail popup) ── */
+.table-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius-md);margin-top:16px;}
+.nwel-table{margin-top:0;min-width:1560px;border-collapse:separate;border-spacing:0;}
+.nwel-table th{text-align:center;white-space:nowrap;padding:7px 8px;border-bottom:1px solid var(--line);background:#fff;}
+.nwel-table th.grp{border-left:2px solid var(--line);font-size:12.5px;color:var(--ink);}
+.nwel-table th.grp-total{background:#E2EFDA;}
+.nwel-table th.gstart,.nwel-table td.gstart{border-left:2px solid var(--line);}
+.nwel-table td{padding:4px 6px;border-bottom:1px solid var(--line-soft);text-align:center;}
+.nwel-table td.pct{background:#FFFBE0;}
+.nwel-table input{width:72px;min-width:72px;padding:6px 7px;text-align:right;}
+.nwel-table .sticky-col{position:sticky;left:0;z-index:2;background:#fff;border-right:2px solid var(--line);text-align:left;font-weight:600;}
+.nwel-table tfoot td{font-weight:700;background:#F2F2F2;border-top:2px solid var(--line);border-bottom:none;}
+.nwel-table tfoot td.sticky-col{background:#F2F2F2;}
+
+.modal-box.modal-xwide{max-width:min(1320px, 96vw);}
+.detail-table.detail-table-wide{white-space:nowrap;font-size:12px;border-collapse:separate;border-spacing:0;}
+.detail-table-wide th{text-align:center;padding:6px 8px;}
+.detail-table-wide th.grp{border-left:2px solid var(--line);}
+.detail-table-wide th.grp-total{background:#E2EFDA;}
+.detail-table-wide th.gstart,.detail-table-wide td.gstart{border-left:2px solid var(--line);}
+.detail-table.detail-table-wide tr td{text-align:right;padding:6px 8px;}
+.detail-table.detail-table-wide tr td.pct{background:#FFFBE0;text-align:center;}
+.detail-table.detail-table-wide tr td.sticky-col,.detail-table-wide th.sticky-col{position:sticky;left:0;background:#fff;text-align:left;font-weight:600;border-right:2px solid var(--line);z-index:1;}
+.detail-table.detail-table-wide tr.detail-footer-row td{background:#F2F2F2;}

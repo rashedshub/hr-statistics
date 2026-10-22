@@ -1,5 +1,5 @@
 import { firebaseConfig } from "./firebase-config.js";
-import { enabledTopics, MONTHS, departmentsForSite, LETTER_TYPES, periodIdFor, periodLabelFor } from "./schema.js";
+import { enabledTopics, MONTHS, DEFAULT_DEPARTMENTS, departmentsForSite, LETTER_TYPES, periodIdFor, periodLabelFor } from "./schema.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, onAuthStateChanged, signOut
@@ -91,6 +91,11 @@ const shortageYear = document.getElementById("shortageYear");
 const shortageMonthTableBody = document.querySelector("#shortageMonthTable tbody");
 const saveShortageYearBtn = document.getElementById("saveShortageYearBtn");
 
+const nwElSite = document.getElementById("nwElSite");
+const nwElYear = document.getElementById("nwElYear");
+const nwElTable = document.getElementById("nwElTable");
+const saveNwElYearBtn = document.getElementById("saveNwElYearBtn");
+
 const injuriesSite = document.getElementById("injuriesSite");
 const injuriesYear = document.getElementById("injuriesYear");
 const injuriesMonthTableBody = document.querySelector("#injuriesMonthTable tbody");
@@ -164,6 +169,8 @@ presentYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).joi
 presentYear.value = CURRENT_YEAR;
 injuriesYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).join("");
 injuriesYear.value = CURRENT_YEAR;
+nwElYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).join("");
+nwElYear.value = CURRENT_YEAR;
 directYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).join("");
 directYear.value = CURRENT_YEAR;
 shortageYear.innerHTML = YEARS.map(y => `<option value="${y}">${y}</option>`).join("");
@@ -354,6 +361,85 @@ function updateShortageRow(num) {
   }
 }
 
+// ── NW EL Plan vs Consumption — department-wise yearly table ────
+// Mirrors the Excel sheet: months down the side; Planned / Enjoyed / % for the Total and for each department.
+// Uses the default (combined "Accounting & Finance") department list, same as the sheet.
+const NWEL_DEPTS = DEFAULT_DEPARTMENTS;
+const nwNum = id => Number(document.getElementById(id).value) || 0;
+const fmtNw = n => (n > 0 ? (Math.round(n * 10) / 10).toLocaleString() : "–");
+const pctNw = (e, p) => (p > 0 ? `${Math.round((e / p) * 100)}%` : "–");
+const setNw = (id, text) => { document.getElementById(id).textContent = text; };
+
+nwElTable.innerHTML = `
+  <thead>
+    <tr>
+      <th rowspan="2" class="sticky-col">Month</th>
+      <th colspan="3" class="grp grp-total">Total</th>
+      ${NWEL_DEPTS.map(d => `<th colspan="3" class="grp">${d.name}</th>`).join("")}
+    </tr>
+    <tr>${Array(NWEL_DEPTS.length + 1).fill('<th class="gstart">Planned</th><th>Enjoyed</th><th>%</th>').join("")}</tr>
+  </thead>
+  <tbody>
+    ${MONTHS.map(m => `
+    <tr>
+      <td class="sticky-col">${m.name}</td>
+      <td class="gstart"><span class="row-total" id="nwElTotP_${m.num}">–</span></td>
+      <td><span class="row-total" id="nwElTotE_${m.num}">–</span></td>
+      <td class="pct"><span class="row-total" id="nwElTotPct_${m.num}">–</span></td>
+      ${NWEL_DEPTS.map(d => `
+      <td class="gstart"><input type="number" step="any" id="nwElP_${d.key}_${m.num}"></td>
+      <td><input type="number" step="any" id="nwElE_${d.key}_${m.num}"></td>
+      <td class="pct"><span class="row-total" id="nwElPct_${d.key}_${m.num}">–</span></td>`).join("")}
+    </tr>`).join("")}
+  </tbody>
+  <tfoot>
+    <tr>
+      <td class="sticky-col">Total</td>
+      <td class="gstart"><span class="row-total" id="nwElFootP_all">–</span></td>
+      <td><span class="row-total" id="nwElFootE_all">–</span></td>
+      <td class="pct"><span class="row-total" id="nwElFootPct_all">–</span></td>
+      ${NWEL_DEPTS.map(d => `
+      <td class="gstart"><span class="row-total" id="nwElFootP_${d.key}">–</span></td>
+      <td><span class="row-total" id="nwElFootE_${d.key}">–</span></td>
+      <td class="pct"><span class="row-total" id="nwElFootPct_${d.key}">–</span></td>`).join("")}
+    </tr>
+  </tfoot>`;
+
+MONTHS.forEach(m => NWEL_DEPTS.forEach(d => {
+  ["P", "E"].forEach(k => {
+    document.getElementById(`nwEl${k}_${d.key}_${m.num}`).addEventListener("input", () => updateNwElRow(m.num));
+  });
+}));
+
+function updateNwElRow(num) {
+  let totP = 0, totE = 0;
+  NWEL_DEPTS.forEach(d => {
+    const p = nwNum(`nwElP_${d.key}_${num}`), e = nwNum(`nwElE_${d.key}_${num}`);
+    totP += p; totE += e;
+    setNw(`nwElPct_${d.key}_${num}`, pctNw(e, p));
+  });
+  setNw(`nwElTotP_${num}`, fmtNw(totP));
+  setNw(`nwElTotE_${num}`, fmtNw(totE));
+  setNw(`nwElTotPct_${num}`, pctNw(totE, totP));
+  updateNwElFoot();
+}
+
+// Total row: sums down every month, per department and overall.
+function updateNwElFoot() {
+  let allP = 0, allE = 0;
+  NWEL_DEPTS.forEach(d => {
+    let p = 0, e = 0;
+    MONTHS.forEach(m => { p += nwNum(`nwElP_${d.key}_${m.num}`); e += nwNum(`nwElE_${d.key}_${m.num}`); });
+    setNw(`nwElFootP_${d.key}`, fmtNw(p));
+    setNw(`nwElFootE_${d.key}`, fmtNw(e));
+    setNw(`nwElFootPct_${d.key}`, pctNw(e, p));
+    allP += p; allE += e;
+  });
+  setNw("nwElFootP_all", fmtNw(allP));
+  setNw("nwElFootE_all", fmtNw(allE));
+  setNw("nwElFootPct_all", pctNw(allE, allP));
+}
+
 // ── Injuries — yearly table ──────────────────────────────────
 injuriesMonthTableBody.innerHTML = MONTHS.map(m => `
   <tr>
@@ -466,7 +552,7 @@ async function refreshSites() {
     </li>`).join("") || `<li><span style="color:#8794a8;">No plants yet — add one above.</span></li>`;
 
   const options = sitesCache.map(s => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
-  [leaveSite, manpowerSite, directSite, shortageSite, feedbackSite, presentSite, injuriesSite, disciplinarySite, formSite, reportsSiteFilter]
+  [leaveSite, nwElSite, manpowerSite, directSite, shortageSite, feedbackSite, presentSite, injuriesSite, disciplinarySite, formSite, reportsSiteFilter]
     .forEach(sel => applySiteOptions(sel, options));
   newAdminSite.innerHTML = options; // Manage Admins panel — super admins only, always full list
 
@@ -482,6 +568,7 @@ async function refreshSites() {
   if (sitesCache.length && hasValidScope) {
     await fetchSiteReports(leaveSite.value);
     loadLeaveYearTable();
+    loadNwElYearTable();
     loadManpowerYearTable();
     loadDirectYearTable();
     loadShortageYearTable();
@@ -958,6 +1045,58 @@ saveShortageYearBtn.addEventListener("click", async () => {
   }
 });
 
+// ── NW EL Plan vs Consumption — yearly load/save ─────────────
+nwElSite.addEventListener("change", async () => {
+  await fetchSiteReports(nwElSite.value);
+  loadNwElYearTable();
+});
+nwElYear.addEventListener("change", loadNwElYearTable);
+
+function loadNwElYearTable() {
+  const reports = reportsCache[nwElSite.value] || {};
+  for (const m of MONTHS) {
+    const map = (reports[periodIdFor(nwElYear.value, m.num)] || {}).nwElDept || {};
+    NWEL_DEPTS.forEach(d => {
+      const v = map[d.key] || {};
+      document.getElementById(`nwElP_${d.key}_${m.num}`).value = v.planned || "";
+      document.getElementById(`nwElE_${d.key}_${m.num}`).value = v.enjoyed || "";
+    });
+    updateNwElRow(m.num);
+  }
+}
+
+saveNwElYearBtn.addEventListener("click", async () => {
+  const siteId = nwElSite.value;
+  if (!siteId) { showToast("Add a plant first"); return; }
+  const year = nwElYear.value;
+
+  saveNwElYearBtn.disabled = true;
+  try {
+    await Promise.all(MONTHS.map(m => {
+      const nwElDept = {};
+      let totalPlanned = 0, totalEnjoyed = 0;
+      NWEL_DEPTS.forEach(d => {
+        const planned = nwNum(`nwElP_${d.key}_${m.num}`), enjoyed = nwNum(`nwElE_${d.key}_${m.num}`);
+        nwElDept[d.key] = { planned, enjoyed };
+        totalPlanned += planned; totalEnjoyed += enjoyed;
+      });
+      return setDoc(
+        doc(db, "sites", siteId, "reports", periodIdFor(year, m.num)),
+        { period: periodLabelFor(year, m.name), nwElDept, nwElPlannedTotal: totalPlanned, nwElEnjoyedTotal: totalEnjoyed },
+        { merge: true }
+      );
+    }));
+    showToast(`Saved NW EL Plan vs Consumption for ${year}`);
+    await fetchSiteReports(siteId);
+    await refreshReportsList();
+  } catch (err) {
+    console.error(err);
+    showToast("Save failed — check console / security rules");
+  } finally {
+    saveNwElYearBtn.disabled = false;
+  }
+});
+
 // ── Injuries — yearly load/save ─────────────────────────────
 injuriesSite.addEventListener("change", async () => {
   await fetchSiteReports(injuriesSite.value);
@@ -1205,6 +1344,7 @@ async function deleteReport(siteId, periodId) {
   await fetchSiteReports(siteId);
   await refreshReportsList();
   if (siteId === leaveSite.value) loadLeaveYearTable();
+  if (siteId === nwElSite.value) loadNwElYearTable();
   if (siteId === manpowerSite.value) loadManpowerYearTable();
   if (siteId === directSite.value) loadDirectYearTable();
   if (siteId === shortageSite.value) loadShortageYearTable();

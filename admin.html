@@ -30,6 +30,7 @@
       <button class="admin-nav-item" data-target="plantsPanel"><i data-lucide="factory"></i><span>Plants</span></button>
       <button class="admin-nav-item" data-target="manageAdminsPanel"><i data-lucide="shield-check"></i><span>Manage Admins</span></button>
       <button class="admin-nav-item" data-target="panelLeave"><i data-lucide="calendar-clock"></i><span>Leave Consumption</span></button>
+      <button class="admin-nav-item" data-target="panelNwEl"><i data-lucide="calendar-check"></i><span>NW EL Plan vs Consumption</span></button>
       <button class="admin-nav-item" data-target="panelManpower"><i data-lucide="users"></i><span>Manpower</span></button>
       <button class="admin-nav-item" data-target="panelDirectManpower"><i data-lucide="user-check"></i><span>Direct Manpower</span></button>
       <button class="admin-nav-item" data-target="panelShortage"><i data-lucide="shield-alert"></i><span>Excess / (Shortage)</span></button>
@@ -123,6 +124,33 @@
 
     <div style="margin-top:16px;">
       <button class="btn primary" id="saveLeaveYearBtn"><i data-lucide="save"></i> Save Leave Consumption (whole year)</button>
+    </div>
+  </div>
+
+  <div class="admin-panel" id="panelNwEl">
+    <h2 style="margin-top:0;">NW EL Plan vs Consumption — department-wise yearly entry</h2>
+    <p class="hint" style="margin-top:-6px;margin-bottom:14px;">
+      Earned Leave for Non-Workers (Asst. Officer to above). For each month, enter <b>Planned</b> and <b>Enjoyed</b> days for every
+      department — half days such as 12.5 are fine. The % columns, the Total columns and the Total row are calculated automatically.
+      Scroll sideways to reach all departments.
+    </p>
+    <div class="form-grid">
+      <div class="field">
+        <label>Plant</label>
+        <select id="nwElSite"></select>
+      </div>
+      <div class="field">
+        <label>Year</label>
+        <select id="nwElYear"></select>
+      </div>
+    </div>
+
+    <div class="table-scroll">
+      <table class="month-table nwel-table" id="nwElTable"><!-- built by admin.js --></table>
+    </div>
+
+    <div style="margin-top:16px;">
+      <button class="btn primary" id="saveNwElYearBtn"><i data-lucide="save"></i> Save NW EL Plan vs Consumption (whole year)</button>
     </div>
   </div>
 
