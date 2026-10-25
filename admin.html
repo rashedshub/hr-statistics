@@ -301,7 +301,7 @@
   <div class="admin-panel" id="panelPresent">
     <h2 style="margin-top:0;">Present % — yearly entry</h2>
     <p class="hint" style="margin-top:-6px;margin-bottom:14px;">
-      Enter each month's headcount and present count — overall for everyone, plus a separate figure for Sewing (Operator) workers. Percentages are calculated automatically.
+      Enter each month's present % for Worker, Non-Worker, Sewing Worker and Total (for example 92.9). The Average row skips months with no entry.
     </p>
     <div class="form-grid">
       <div class="field">
@@ -316,17 +316,18 @@
 
     <table class="month-table" id="presentMonthTable">
       <thead>
-        <tr>
-          <th>Month</th>
-          <th>Total Employees</th>
-          <th>Total Present</th>
-          <th>Overall % (auto)</th>
-          <th>Sewing Headcount</th>
-          <th>Sewing Present</th>
-          <th>Sewing % (auto)</th>
-        </tr>
+        <tr><th>Month</th><th>Worker (%)</th><th>Non-Worker (%)</th><th>Sewing Worker (%)</th><th>Total (%)</th></tr>
       </thead>
       <tbody><!-- 12 rows injected by admin.js --></tbody>
+      <tfoot>
+        <tr>
+          <td>Average</td>
+          <td><span class="row-total" id="presentAvgWorker">–</span></td>
+          <td><span class="row-total" id="presentAvgNonWorker">–</span></td>
+          <td><span class="row-total" id="presentAvgSewing">–</span></td>
+          <td><span class="row-total" id="presentAvgTotal">–</span></td>
+        </tr>
+      </tfoot>
     </table>
 
     <div style="margin-top:16px;">

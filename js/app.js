@@ -1,4 +1,4 @@
-import { departmentsForSite, DEFAULT_DEPARTMENTS } from "./schema.js";
+import { departmentsForSite, DEFAULT_DEPARTMENTS, presentPercents } from "./schema.js";
 import { db, periodYear, pickDefaultPeriod, escapeHtml, loadSitesList, fetchSiteReportsMap } from "./dashboard-shared.js";
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -145,6 +145,34 @@ function drawXlBars(key, canvasId, labels, datasets, { legend = false, valueLabe
       scales: {
         x: { grid: { display: false }, ticks: { color: XL_TEXT, font: { size: 10 } } },
         y: { display: false, beginAtZero: true, grace: "22%" }   // headroom so the value labels are not cut off
+      }
+    }
+  });
+}
+
+// Trend line for the year; months with no entry are null and are skipped. Only the selected month gets a value label.
+function drawXlLine(key, canvasId, labels, data, highlightIdx, suffix = "") {
+  if (xlCharts[key]) xlCharts[key].destroy();
+  xlCharts[key] = new Chart(document.getElementById(canvasId).getContext("2d"), {
+    type: "line",
+    data: { labels, datasets: [{
+      data, borderColor: XL_DARK, backgroundColor: XL_DARK, borderWidth: 2, tension: 0.3, spanGaps: true,
+      pointRadius: ctx => (ctx.dataIndex === highlightIdx ? 5 : 3)
+    }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      layout: { padding: { top: 20, left: 8, right: 12 } },
+      plugins: {
+        legend: { display: false },
+        datalabels: {
+          display: ctx => ctx.dataIndex === highlightIdx && ctx.dataset.data[ctx.dataIndex] !== null,
+          anchor: "end", align: "top", clamp: true, clip: false, color: XL_TEXT,
+          font: ctx => xlFont(ctx, 0.05, 9), formatter: v => (v === null ? "" : v + suffix)
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: XL_TEXT, font: { size: 10 } } },
+        y: { display: false, grace: "30%" }
       }
     }
   });
@@ -298,25 +326,25 @@ function render(siteId, periodId) {
     backgroundColor: sickSeries.map((_, i) => i === selectedMonthIdx ? XL_DARK : XL_LIGHT)
   }]);
 
-  // ── Present % ────────────────────────────────────────────────
-  const presentTotalEmployees = Number(current.presentTotalEmployees) || 0;
-  const presentTotalPresent = Number(current.presentTotalPresent) || 0;
-  const presentSewingTotal = Number(current.presentSewingTotal) || 0;
-  const presentSewingPresent = Number(current.presentSewingPresent) || 0;
-  const presentOverallPct = presentTotalEmployees > 0 ? Math.round((presentTotalPresent / presentTotalEmployees) * 1000) / 10 : 0;
-  const presentSewingPct = presentSewingTotal > 0 ? Math.round((presentSewingPresent / presentSewingTotal) * 1000) / 10 : 0;
-  const presentPcts = Object.keys(reportsById).filter(upToNow).map(id => {
-    const r = reportsById[id];
-    const emp = Number(r.presentTotalEmployees) || 0, pr = Number(r.presentTotalPresent) || 0;
-    return emp > 0 ? (pr / emp) * 100 : null;
-  }).filter(v => v !== null);
-  const presentYtdAvg = presentPcts.length ? Math.round((presentPcts.reduce((a, b) => a + b, 0) / presentPcts.length) * 10) / 10 : null;
+  // ── Present % (percentages entered per month: Worker / Non-Worker / Sewing / Total) ──
+  const pp = presentPercents(current);
+  const presentTotals = Object.keys(reportsById).filter(upToNow)
+    .map(id => presentPercents(reportsById[id]).total).filter(v => v !== null);
+  const presentYtdAvg = presentTotals.length
+    ? Math.round((presentTotals.reduce((a, b) => a + b, 0) / presentTotals.length) * 10) / 10
+    : null;
+  const pctText = v => (v === null ? "–" : `${v}%`);
 
-  setT("presentOverallPct", `${presentOverallPct}%`);
-  setT("presentLinePresent", `Present: ${plain(presentTotalPresent)}`);
-  setT("presentSewingPct", `Sewing: ${presentSewingPct}%`);
-  setT("presentYtdAvg", `YTD: ${presentYtdAvg === null ? "–" : presentYtdAvg + "%"}`);
-  drawXlPie("present", "presentChart", ["Present", "Absent"], [presentTotalPresent, Math.max(presentTotalEmployees - presentTotalPresent, 0)]);
+  setT("presentOverallPct", pctText(pp.total));
+  setT("presentLineW", `W: ${pctText(pp.worker)}`);
+  setT("presentLineNW", `NW: ${pctText(pp.nonWorker)}`);
+  setT("presentLineSewing", `Sewing: ${pctText(pp.sewing)}`);
+  setT("presentYtdAvg", `YTD: ${pctText(presentYtdAvg)}`);
+  const presentSeries = MONTH_NAMES.map((_, i) => {
+    const rec = year ? reportsById[`${year}-${String(i + 1).padStart(2, "0")}`] : null;
+    return rec ? presentPercents(rec).total : null;
+  });
+  drawXlLine("present", "presentChart", ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"], presentSeries, selectedMonthIdx, "%");
 
   // ── Injuries ─────────────────────────────────────────────────
   const injuriesTotalMonth = Number(current.injuriesTotal) || 0;
@@ -454,6 +482,7 @@ function openDetailModal(config) {
     data: {
       labels: config.rows.map(r => r.label.slice(0, 3)),
       datasets: config.datasets.map(d => ({
+        spanGaps: true,
         label: d.label,
         data: config.rows.map(r => r[d.key]),
         backgroundColor: d.color,
@@ -468,7 +497,7 @@ function openDetailModal(config) {
       plugins: { legend: { labels: { font: { size: 11.5 } } }, datalabels: { display: false } },
       scales: {
         x: { grid: { display: false } },
-        y: { beginAtZero: true }
+        y: { beginAtZero: config.yMin === undefined, min: config.yMin, max: config.yMax }
       }
     }
   });
@@ -560,31 +589,48 @@ sickPanel.addEventListener("click", () => {
   });
 });
 
-// ── Present % detail ─────────────────────────────────────────
+// ── Present % detail (percentages by month, with Average row) ──
 const presentPanel = document.getElementById("presentPanel");
 presentPanel.addEventListener("click", () => {
-  const { year, rows } = buildMonthRows(periodSelect.value, [
-    "presentTotalEmployees", "presentTotalPresent", "presentSewingTotal", "presentSewingPresent"
-  ]);
-  rows.forEach(r => {
-    r.overallPct = r.presentTotalEmployees > 0 ? Math.round((r.presentTotalPresent / r.presentTotalEmployees) * 1000) / 10 : 0;
-    r.sewingPct = r.presentSewingTotal > 0 ? Math.round((r.presentSewingPresent / r.presentSewingTotal) * 1000) / 10 : 0;
-  });
+  const year = periodYear(periodSelect.value);
   const siteName = sites.find(s => s.id === currentSiteId)?.name || "";
+  const rows = MONTH_NAMES.map((name, i) => {
+    const rec = year ? reportsById[`${year}-${String(i + 1).padStart(2, "0")}`] : null;
+    const pc = presentPercents(rec || {});
+    return {
+      label: name, hasData: !!rec,
+      worker: pc.worker ?? 0, nonWorker: pc.nonWorker ?? 0, sewing: pc.sewing ?? 0, total: pc.total ?? 0,
+      cWorker: pc.worker, cNonWorker: pc.nonWorker, cSewing: pc.sewing, cTotal: pc.total   // null = not entered, so the lines skip it
+    };
+  });
+  const dash = key => r => (r[key] > 0 ? `${r[key]}%` : "–");
+  const avgOf = key => {
+    const vals = rows.map(r => r[key]).filter(v => v > 0);
+    return vals.length ? `${fmtAvg(vals.reduce((a, b) => a + b, 0) / vals.length)}%` : "–";
+  };
+  const columns = [
+    { key: "worker", label: "Worker" },
+    { key: "nonWorker", label: "Non-Worker" },
+    { key: "sewing", label: "Sewing Worker" },
+    { key: "total", label: "Total" }
+  ].map(c => ({ ...c, format: dash(c.key) }));
+
+  const entered = rows.flatMap(r => [r.cWorker, r.cNonWorker, r.cSewing, r.cTotal]).filter(v => v !== null);
+  const yMin = entered.length ? Math.max(0, Math.floor((Math.min(...entered) - 5) / 5) * 5) : 0;
+
   openDetailModal({
     title: `Present % — ${siteName}${year ? " " + year : ""}`,
     rows,
-    columns: [
-      { key: "overallPct", label: "Overall %", format: r => r.overallPct + "%" },
-      { key: "sewingPct", label: "Sewing %", format: r => r.sewingPct + "%" },
-      { key: "presentTotalEmployees", label: "Total Employees" },
-      { key: "presentSewingTotal", label: "Sewing Headcount" }
-    ],
+    columns,
+    footer: { label: "Average", cells: columns.map(c => avgOf(c.key)) },
     datasets: [
-      { key: "overallPct", label: "Overall %", color: "#16A34A" },
-      { key: "sewingPct", label: "Sewing %", color: "#86EFAC" }
+      { key: "cWorker", label: "Worker", color: "#3F63AE" },
+      { key: "cNonWorker", label: "Non-Worker", color: "#91A3D5" },
+      { key: "cSewing", label: "Sewing Worker", color: "#0EA5A5" },
+      { key: "cTotal", label: "Total", color: "#404040" }
     ],
-    chartType: "line"
+    chartType: "line",
+    yMin, yMax: 100
   });
 });
 

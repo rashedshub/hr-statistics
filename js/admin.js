@@ -1,5 +1,5 @@
 import { firebaseConfig } from "./firebase-config.js";
-import { enabledTopics, MONTHS, DEFAULT_DEPARTMENTS, departmentsForSite, LETTER_TYPES, periodIdFor, periodLabelFor } from "./schema.js";
+import { enabledTopics, MONTHS, DEFAULT_DEPARTMENTS, departmentsForSite, LETTER_TYPES, presentPercents, periodIdFor, periodLabelFor } from "./schema.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getAuth, onAuthStateChanged, signOut
@@ -264,37 +264,31 @@ function updateFeedbackRowTotal(num) {
   return total;
 }
 
-// ── Present % — yearly table ────────────────────────────────
+// ── Present % — yearly table (percentages typed in directly, like the Excel sheet) ─
+const PRESENT_COLS = [
+  { k: "Worker", pc: "worker", field: "presentPctWorker", label: "Worker" },
+  { k: "NonWorker", pc: "nonWorker", field: "presentPctNonWorker", label: "Non-Worker" },
+  { k: "Sewing", pc: "sewing", field: "presentPctSewing", label: "Sewing Worker" },
+  { k: "Total", pc: "total", field: "presentPctTotal", label: "Total" }
+];
+
 presentMonthTableBody.innerHTML = MONTHS.map(m => `
   <tr>
     <td>${m.name}</td>
-    <td><input type="number" step="any" id="presentTotalEmployees_${m.num}"></td>
-    <td><input type="number" step="any" id="presentTotalPresent_${m.num}"></td>
-    <td><span class="row-total" id="presentOverallPct_${m.num}">0%</span></td>
-    <td><input type="number" step="any" id="presentSewingTotal_${m.num}"></td>
-    <td><input type="number" step="any" id="presentSewingPresent_${m.num}"></td>
-    <td><span class="row-total" id="presentSewingPct_${m.num}">0%</span></td>
+    ${PRESENT_COLS.map(c => `<td><input type="number" step="0.1" min="0" max="100" placeholder="%" id="present${c.k}_${m.num}"></td>`).join("")}
   </tr>`).join("");
 
-MONTHS.forEach(m => {
-  const recalc = () => updatePresentRowPct(m.num);
-  document.getElementById(`presentTotalEmployees_${m.num}`).addEventListener("input", recalc);
-  document.getElementById(`presentTotalPresent_${m.num}`).addEventListener("input", recalc);
-  document.getElementById(`presentSewingTotal_${m.num}`).addEventListener("input", recalc);
-  document.getElementById(`presentSewingPresent_${m.num}`).addEventListener("input", recalc);
-});
+MONTHS.forEach(m => PRESENT_COLS.forEach(c => {
+  document.getElementById(`present${c.k}_${m.num}`).addEventListener("input", updatePresentAverages);
+}));
 
-function updatePresentRowPct(num) {
-  const totalEmployees = Number(document.getElementById(`presentTotalEmployees_${num}`).value) || 0;
-  const totalPresent = Number(document.getElementById(`presentTotalPresent_${num}`).value) || 0;
-  const sewingTotal = Number(document.getElementById(`presentSewingTotal_${num}`).value) || 0;
-  const sewingPresent = Number(document.getElementById(`presentSewingPresent_${num}`).value) || 0;
-
-  const overallPct = totalEmployees > 0 ? Math.round((totalPresent / totalEmployees) * 1000) / 10 : 0;
-  const sewingPct = sewingTotal > 0 ? Math.round((sewingPresent / sewingTotal) * 1000) / 10 : 0;
-
-  document.getElementById(`presentOverallPct_${num}`).textContent = `${overallPct}%`;
-  document.getElementById(`presentSewingPct_${num}`).textContent = `${sewingPct}%`;
+// Average row: mean of the months that have a value (blank / 0 months are skipped).
+function updatePresentAverages() {
+  PRESENT_COLS.forEach(c => {
+    const vals = MONTHS.map(m => Number(document.getElementById(`present${c.k}_${m.num}`).value) || 0).filter(v => v > 0);
+    document.getElementById(`presentAvg${c.k}`).textContent =
+      vals.length ? `${fmtAvg(vals.reduce((a, b) => a + b, 0) / vals.length)}%` : "–";
+  });
 }
 
 // ── Direct Manpower — yearly table ───────────────────────────
@@ -884,18 +878,14 @@ presentSite.addEventListener("change", async () => {
 presentYear.addEventListener("change", loadPresentYearTable);
 
 function loadPresentYearTable() {
-  const siteId = presentSite.value;
-  const year = presentYear.value;
-  const reports = reportsCache[siteId] || {};
-
+  const reports = reportsCache[presentSite.value] || {};
   for (const m of MONTHS) {
-    const rec = reports[periodIdFor(year, m.num)] || {};
-    document.getElementById(`presentTotalEmployees_${m.num}`).value = rec.presentTotalEmployees || "";
-    document.getElementById(`presentTotalPresent_${m.num}`).value = rec.presentTotalPresent || "";
-    document.getElementById(`presentSewingTotal_${m.num}`).value = rec.presentSewingTotal || "";
-    document.getElementById(`presentSewingPresent_${m.num}`).value = rec.presentSewingPresent || "";
-    updatePresentRowPct(m.num);
+    const pc = presentPercents(reports[periodIdFor(presentYear.value, m.num)] || {});
+    PRESENT_COLS.forEach(c => {
+      document.getElementById(`present${c.k}_${m.num}`).value = pc[c.pc] ?? "";
+    });
   }
+  updatePresentAverages();
 }
 
 savePresentYearBtn.addEventListener("click", async () => {
@@ -903,24 +893,20 @@ savePresentYearBtn.addEventListener("click", async () => {
   if (!siteId) { showToast("Add a plant first"); return; }
   const year = presentYear.value;
 
+  // Percentages only make sense between 0 and 100 — catch a typo before it is saved.
+  for (const m of MONTHS) {
+    for (const c of PRESENT_COLS) {
+      const v = Number(document.getElementById(`present${c.k}_${m.num}`).value) || 0;
+      if (v < 0 || v > 100) { showToast(`${m.name}, ${c.label}: enter a percentage between 0 and 100`); return; }
+    }
+  }
+
   savePresentYearBtn.disabled = true;
   try {
     await Promise.all(MONTHS.map(m => {
-      const totalEmployees = Number(document.getElementById(`presentTotalEmployees_${m.num}`).value) || 0;
-      const totalPresent = Number(document.getElementById(`presentTotalPresent_${m.num}`).value) || 0;
-      const sewingTotal = Number(document.getElementById(`presentSewingTotal_${m.num}`).value) || 0;
-      const sewingPresent = Number(document.getElementById(`presentSewingPresent_${m.num}`).value) || 0;
-      return setDoc(
-        doc(db, "sites", siteId, "reports", periodIdFor(year, m.num)),
-        {
-          period: periodLabelFor(year, m.name),
-          presentTotalEmployees: totalEmployees,
-          presentTotalPresent: totalPresent,
-          presentSewingTotal: sewingTotal,
-          presentSewingPresent: sewingPresent
-        },
-        { merge: true }
-      );
+      const data = { period: periodLabelFor(year, m.name) };
+      PRESENT_COLS.forEach(c => { data[c.field] = Number(document.getElementById(`present${c.k}_${m.num}`).value) || 0; });
+      return setDoc(doc(db, "sites", siteId, "reports", periodIdFor(year, m.num)), data, { merge: true });
     }));
     showToast(`Saved Present % for ${year}`);
     await fetchSiteReports(siteId);

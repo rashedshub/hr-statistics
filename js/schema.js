@@ -89,12 +89,12 @@ export const TOPICS = [
     title: "Present %",
     icon: "user-round-check",
     enabled: true,
-    customAdminUI: true, // has its own year-at-a-glance table in admin.js — skipped by the generic form
+    customAdminUI: true, // own yearly table in admin.js — percentages are entered directly per month
     fields: [
-      { key: "presentTotalEmployees", label: "Total employees", type: "number" },
-      { key: "presentTotalPresent", label: "Present (total)", type: "number" },
-      { key: "presentSewingTotal", label: "Sewing worker headcount", type: "number" },
-      { key: "presentSewingPresent", label: "Sewing worker present", type: "number" }
+      { key: "presentPctWorker", label: "Present % — Worker", type: "number" },
+      { key: "presentPctNonWorker", label: "Present % — Non-Worker", type: "number" },
+      { key: "presentPctSewing", label: "Present % — Sewing Worker", type: "number" },
+      { key: "presentPctTotal", label: "Present % — Total", type: "number" }
     ]
   },
   {
@@ -196,6 +196,22 @@ export const LETTER_TYPES = [
 // "July 2025 to June 2026"), overwritten in place rather than saved per month.
 // It lives at sites/{siteId}/meta/disciplinary — see admin.js / disciplinary.js.
 export const DISCIPLINARY_META = { title: "Disciplinary Action", icon: "scale" };
+
+// Present % per month, as numbers (null = not entered). Months saved under the older headcount-based
+// entry (presentTotalEmployees / presentTotalPresent, presentSewingTotal / presentSewingPresent) still
+// show their Total and Sewing %, until the month is saved again in the new percentage form.
+export function presentPercents(rec) {
+  rec = rec || {};
+  const entered = key => rec[key] !== undefined && rec[key] !== null;
+  const val = key => (Number(rec[key]) > 0 ? Number(rec[key]) : null);
+  const ratio = (num, den) => (Number(den) > 0 && Number(num) > 0 ? Math.round((Number(num) / Number(den)) * 1000) / 10 : null);
+  return {
+    worker: val("presentPctWorker"),
+    nonWorker: val("presentPctNonWorker"),
+    sewing: entered("presentPctSewing") ? val("presentPctSewing") : ratio(rec.presentSewingPresent, rec.presentSewingTotal),
+    total: entered("presentPctTotal") ? val("presentPctTotal") : ratio(rec.presentTotalPresent, rec.presentTotalEmployees)
+  };
+}
 
 export function enabledTopics() {
   return TOPICS.filter(t => t.enabled);
