@@ -8,6 +8,7 @@ const stateMsg = document.getElementById("stateMsg");
 const topicsWrap = document.getElementById("topicsWrap");
 const disciplinaryLink = document.getElementById("disciplinaryLink");
 
+let defaultPeriodId = null;   // what the dashboard opens on by itself (last month)
 let sites = [];
 let currentSiteId = null;
 let reportsById = {}; // periodId -> report data, for the currently loaded site
@@ -57,6 +58,7 @@ async function loadReportsForSite(siteId, wantedPeriod) {
   periodSelect.innerHTML = periods.map(p =>
     `<option value="${p}">${escapeHtml(reportsById[p].period || p)}</option>`
   ).join("");
+  defaultPeriodId = pickDefaultPeriod(periods);
   const chosenPeriod = pickDefaultPeriod(periods, wantedPeriod);
   periodSelect.value = chosenPeriod;
 
@@ -770,7 +772,8 @@ feedbackPanel.addEventListener("click", () => {
 function syncUrl(siteId, periodId) {
   const params = new URLSearchParams();
   params.set("site", siteId);
-  params.set("period", periodId);
+  // Only pin the month in the link when someone picked a different one; otherwise a bookmark would stay stuck on it.
+  if (periodId !== defaultPeriodId) params.set("period", periodId);
   history.replaceState(null, "", `${location.pathname}?${params.toString()}`);
 }
 

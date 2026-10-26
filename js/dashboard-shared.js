@@ -17,15 +17,22 @@ export function periodYear(periodId) {
   return m ? m[1] : null;
 }
 
-// Always prefer the real current month; if no data has been entered for it yet,
-// fall back to the most recent month at or before now that does have data;
-// only if nothing qualifies do we fall back to whatever's newest overall.
-export function pickDefaultPeriod(periods, wantedFromUrl) {
+// The month before the current one, e.g. in October this is "2026-09" (December -> January rolls back a year).
+export function previousPeriodId(now = new Date()) {
+  const d = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+// The dashboard opens on LAST month (the last completed month), not the month in progress.
+// If last month has no data yet, fall back to the most recent earlier month that does;
+// if there is nothing at or before last month, use whatever is newest overall.
+// A month asked for explicitly (e.g. a shared link) always wins.
+export function pickDefaultPeriod(periods, wantedFromUrl, now = new Date()) {
   if (wantedFromUrl && periods.includes(wantedFromUrl)) return wantedFromUrl;
-  const nowId = currentPeriodId();
-  if (periods.includes(nowId)) return nowId;
-  const upToNow = periods.filter(p => p <= nowId).sort();
-  if (upToNow.length) return upToNow[upToNow.length - 1];
+  const target = previousPeriodId(now);
+  if (periods.includes(target)) return target;
+  const upToTarget = periods.filter(p => p <= target).sort();
+  if (upToTarget.length) return upToTarget[upToTarget.length - 1];
   return periods[0];
 }
 
