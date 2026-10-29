@@ -232,6 +232,20 @@ function nwElTotals(ids) {
 }
 const nwPct = (e, p) => (p > 0 ? Math.round((e / p) * 100) : 0);
 
+// Total Leave (Plan) per department for the year. It is saved on every month of that year,
+// so take it from the selected month, or from any month of the same year that has it.
+function nwElTotalLeaveFor(periodId) {
+  const year = periodYear(periodId);
+  const hasIt = id => reportsById[id] && reportsById[id].nwElTotalLeave;
+  let source = hasIt(periodId) ? periodId : null;
+  if (!source && year) source = Object.keys(reportsById).filter(id => periodYear(id) === year && hasIt(id)).sort()[0] || null;
+  const map = source ? reportsById[source].nwElTotalLeave : {};
+  const perDept = {};
+  let total = 0;
+  DEFAULT_DEPARTMENTS.forEach(d => { perDept[d.key] = Number(map[d.key]) || 0; total += perDept[d.key]; });
+  return { perDept, total };
+}
+
 function render(siteId, periodId) {
   const current = reportsById[periodId] || {};
   const year = periodYear(periodId);
@@ -298,13 +312,14 @@ function render(siteId, periodId) {
   setT("leaveYtdPct", `YTD: ${ytdPct}%`);
   drawXlPie("leave", "leaveChart", ["Consumed", "Balance"], [ytdElActual, Math.max(totalElPlan - ytdElActual, 0)]);
 
-  // ── NW EL Plan vs Consumption (YTD through the selected month; department-wise bars) ──
+  // ── NW Plan vs Consumption (YTD through the selected month; department-wise bars) ──
   const nwYtd = nwElTotals(Object.keys(reportsById).filter(upToNow));
-  const nwMonth = nwElTotals([periodId]);
+  const nwLeave = nwElTotalLeaveFor(periodId);
   setT("nwElBigPct", `${nwPct(nwYtd.e, nwYtd.p)}%`);
   setT("nwElPlanned", `Planned: ${plain(nwYtd.p)}`);
   setT("nwElEnjoyed", `Enjoyed: ${plain(nwYtd.e)}`);
-  setT("nwElMonthPct", `Month: ${nwPct(nwMonth.e, nwMonth.p)}%`);
+  setT("nwElTotalLeave", `Total Leave: ${nwLeave.total > 0 ? plain(nwLeave.total) : "–"}`);
+  setT("nwElOfTotal", `Of total: ${nwLeave.total > 0 ? nwPct(nwYtd.e, nwLeave.total) + "%" : "–"}`);
   drawXlBars("nwEl", "nwElChart", DEFAULT_DEPARTMENTS.map(d => NW_DEPT_SHORT[d.key] || d.name), [{
     label: "% enjoyed vs planned",
     data: DEFAULT_DEPARTMENTS.map(d => nwPct(nwYtd.perDept[d.key].e, nwYtd.perDept[d.key].p)),
@@ -554,10 +569,19 @@ nwElPanel.addEventListener("click", () => {
       <td class="sticky-col">${label}</td>${trio(t.p, t.e)}
       ${DEFAULT_DEPARTMENTS.map(d => trio(t.perDept[d.key].p, t.perDept[d.key].e)).join("")}
     </tr>`;
-  const body = monthRows.map(r => line(r.name, r)).join("") + line("Total", yearTotal, ' class="detail-footer-row"');
+  // Total Leave (Plan) row: the % here is Enjoyed ÷ Total Leave (for the whole year).
+  const totalLeave = nwElTotalLeaveFor(periodSelect.value);
+  const leaveRow = `
+    <tr class="detail-footer-row">
+      <td class="sticky-col">Total Leave (Plan)</td>
+      <td class="gstart" colspan="2">${fmt(totalLeave.total)}</td><td class="pct">${pct(yearTotal.e, totalLeave.total)}</td>
+      ${DEFAULT_DEPARTMENTS.map(d => `<td class="gstart" colspan="2">${fmt(totalLeave.perDept[d.key])}</td><td class="pct">${pct(yearTotal.perDept[d.key].e, totalLeave.perDept[d.key])}</td>`).join("")}
+    </tr>
+    <tr><td class="note-cell" colspan="${1 + 3 * (DEFAULT_DEPARTMENTS.length + 1)}">On the Total Leave (Plan) row, % = Enjoyed ÷ Total Leave.</td></tr>`;
+  const body = monthRows.map(r => line(r.name, r)).join("") + line("Total", yearTotal, ' class="detail-footer-row"') + leaveRow;
 
   openDetailModal({
-    title: `NW EL Plan vs Consumption — ${siteName}${year ? " " + year : ""}`,
+    title: `NW Plan vs Consumption — ${siteName}${year ? " " + year : ""}`,
     rows: monthRows.map(r => ({ label: r.name, hasData: r.p > 0 || r.e > 0, planned: r.p, enjoyed: r.e })),
     datasets: [
       { key: "planned", label: "Planned", color: "#91A3D5" },

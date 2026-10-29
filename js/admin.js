@@ -397,6 +397,14 @@ nwElTable.innerHTML = `
       <td><span class="row-total" id="nwElFootE_${d.key}">–</span></td>
       <td class="pct"><span class="row-total" id="nwElFootPct_${d.key}">–</span></td>`).join("")}
     </tr>
+    <tr>
+      <td class="sticky-col">Total Leave (Plan)</td>
+      <td class="gstart" colspan="2"><span class="row-total" id="nwElTL_all">–</span></td>
+      <td class="pct"><span class="row-total" id="nwElTLPct_all">–</span></td>
+      ${NWEL_DEPTS.map(d => `
+      <td class="gstart" colspan="2"><input type="number" step="any" id="nwElTL_${d.key}" placeholder="days"></td>
+      <td class="pct"><span class="row-total" id="nwElTLPct_${d.key}">–</span></td>`).join("")}
+    </tr>
   </tfoot>`;
 
 MONTHS.forEach(m => NWEL_DEPTS.forEach(d => {
@@ -404,6 +412,10 @@ MONTHS.forEach(m => NWEL_DEPTS.forEach(d => {
     document.getElementById(`nwEl${k}_${d.key}_${m.num}`).addEventListener("input", () => updateNwElRow(m.num));
   });
 }));
+
+NWEL_DEPTS.forEach(d => {
+  document.getElementById(`nwElTL_${d.key}`).addEventListener("input", updateNwElFoot);
+});
 
 function updateNwElRow(num) {
   let totP = 0, totE = 0;
@@ -419,19 +431,24 @@ function updateNwElRow(num) {
 }
 
 // Total row: sums down every month, per department and overall.
+// Total Leave (Plan) row: the % is Enjoyed ÷ Total Leave for the year.
 function updateNwElFoot() {
-  let allP = 0, allE = 0;
+  let allP = 0, allE = 0, allTL = 0;
   NWEL_DEPTS.forEach(d => {
     let p = 0, e = 0;
     MONTHS.forEach(m => { p += nwNum(`nwElP_${d.key}_${m.num}`); e += nwNum(`nwElE_${d.key}_${m.num}`); });
+    const tl = nwNum(`nwElTL_${d.key}`);
     setNw(`nwElFootP_${d.key}`, fmtNw(p));
     setNw(`nwElFootE_${d.key}`, fmtNw(e));
     setNw(`nwElFootPct_${d.key}`, pctNw(e, p));
-    allP += p; allE += e;
+    setNw(`nwElTLPct_${d.key}`, pctNw(e, tl));
+    allP += p; allE += e; allTL += tl;
   });
   setNw("nwElFootP_all", fmtNw(allP));
   setNw("nwElFootE_all", fmtNw(allE));
   setNw("nwElFootPct_all", pctNw(allE, allP));
+  setNw("nwElTL_all", fmtNw(allTL));
+  setNw("nwElTLPct_all", pctNw(allE, allTL));
 }
 
 // ── Injuries — yearly table ──────────────────────────────────
@@ -1040,6 +1057,15 @@ nwElYear.addEventListener("change", loadNwElYearTable);
 
 function loadNwElYearTable() {
   const reports = reportsCache[nwElSite.value] || {};
+
+  // Total Leave (Plan) is one figure per department for the year, saved on every month of that year.
+  let totalLeave = {};
+  for (const m of MONTHS) {
+    const rec = reports[periodIdFor(nwElYear.value, m.num)];
+    if (rec && rec.nwElTotalLeave) { totalLeave = rec.nwElTotalLeave; break; }
+  }
+  NWEL_DEPTS.forEach(d => { document.getElementById(`nwElTL_${d.key}`).value = totalLeave[d.key] || ""; });
+
   for (const m of MONTHS) {
     const map = (reports[periodIdFor(nwElYear.value, m.num)] || {}).nwElDept || {};
     NWEL_DEPTS.forEach(d => {
@@ -1058,6 +1084,10 @@ saveNwElYearBtn.addEventListener("click", async () => {
 
   saveNwElYearBtn.disabled = true;
   try {
+    const nwElTotalLeave = {};
+    let totalLeaveAll = 0;
+    NWEL_DEPTS.forEach(d => { nwElTotalLeave[d.key] = nwNum(`nwElTL_${d.key}`); totalLeaveAll += nwElTotalLeave[d.key]; });
+
     await Promise.all(MONTHS.map(m => {
       const nwElDept = {};
       let totalPlanned = 0, totalEnjoyed = 0;
@@ -1068,11 +1098,11 @@ saveNwElYearBtn.addEventListener("click", async () => {
       });
       return setDoc(
         doc(db, "sites", siteId, "reports", periodIdFor(year, m.num)),
-        { period: periodLabelFor(year, m.name), nwElDept, nwElPlannedTotal: totalPlanned, nwElEnjoyedTotal: totalEnjoyed },
+        { period: periodLabelFor(year, m.name), nwElDept, nwElPlannedTotal: totalPlanned, nwElEnjoyedTotal: totalEnjoyed, nwElTotalLeave, nwElTotalLeaveAll: totalLeaveAll },
         { merge: true }
       );
     }));
-    showToast(`Saved NW EL Plan vs Consumption for ${year}`);
+    showToast(`Saved NW Plan vs Consumption for ${year}`);
     await fetchSiteReports(siteId);
     await refreshReportsList();
   } catch (err) {
