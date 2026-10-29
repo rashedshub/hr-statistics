@@ -30,7 +30,7 @@
       <button class="admin-nav-item" data-target="plantsPanel"><i data-lucide="factory"></i><span>Plants</span></button>
       <button class="admin-nav-item" data-target="manageAdminsPanel"><i data-lucide="shield-check"></i><span>Manage Admins</span></button>
       <button class="admin-nav-item" data-target="panelLeave"><i data-lucide="calendar-clock"></i><span>Leave Consumption</span></button>
-      <button class="admin-nav-item" data-target="panelNwEl"><i data-lucide="calendar-check"></i><span>NW EL Plan vs Consumption</span></button>
+      <button class="admin-nav-item" data-target="panelNwEl"><i data-lucide="calendar-check"></i><span>NW Plan vs Consumption</span></button>
       <button class="admin-nav-item" data-target="panelManpower"><i data-lucide="users"></i><span>Manpower</span></button>
       <button class="admin-nav-item" data-target="panelDirectManpower"><i data-lucide="user-check"></i><span>Direct Manpower</span></button>
       <button class="admin-nav-item" data-target="panelShortage"><i data-lucide="shield-alert"></i><span>Excess / (Shortage)</span></button>
@@ -128,11 +128,12 @@
   </div>
 
   <div class="admin-panel" id="panelNwEl">
-    <h2 style="margin-top:0;">NW EL Plan vs Consumption — department-wise yearly entry</h2>
+    <h2 style="margin-top:0;">NW Plan vs Consumption — department-wise yearly entry</h2>
     <p class="hint" style="margin-top:-6px;margin-bottom:14px;">
-      Earned Leave for Non-Workers (Asst. Officer to above). For each month, enter <b>Planned</b> and <b>Enjoyed</b> days for every
-      department — half days such as 12.5 are fine. The % columns, the Total columns and the Total row are calculated automatically.
-      Scroll sideways to reach all departments.
+      Leave for Non-Workers (Asst. Officer to above). For each month, enter <b>Planned</b> and <b>Enjoyed</b> days for every
+      department — half days such as 12.5 are fine. At the bottom, enter each department's <b>Total Leave (Plan)</b> for the whole
+      year; the % beside it shows how much of that total has been enjoyed. The other % columns, the Total columns and the Total row are
+      calculated automatically. Scroll sideways to reach all departments.
     </p>
     <div class="form-grid">
       <div class="field">
@@ -150,7 +151,7 @@
     </div>
 
     <div style="margin-top:16px;">
-      <button class="btn primary" id="saveNwElYearBtn"><i data-lucide="save"></i> Save NW EL Plan vs Consumption (whole year)</button>
+      <button class="btn primary" id="saveNwElYearBtn"><i data-lucide="save"></i> Save NW Plan vs Consumption (whole year)</button>
     </div>
   </div>
 
